@@ -1,6 +1,12 @@
 // ══════════════════════════════════════════════
-// entities.js — создание всех сущностей
+// entities.js — создание сущностей
 // ══════════════════════════════════════════════
+
+function createEntity(d) {
+  d.rx = d.tx;
+  d.ry = d.ty;
+  return d;
+}
 
 function countMonstersInChunk(chunk, key) {
   let c = 0;
@@ -32,43 +38,23 @@ function getEntitiesAt(tx, ty, chunk) {
   // Ресурсы
   if (tile.biome === 'grass' && h < 0.18) {
     let rt = RESOURCE_TYPES['tree'];
-    entities.push(createEntity({
-      type: 'resource', resourceKey: 'tree',
-      tx, ty, texKey: rt.texKey, name: rt.name,
-      hp: rt.hp, maxHp: rt.hp, h: rt.h, color: rt.color, drops: rt.drops
-    }));
+    entities.push(createEntity({ type:'resource', resourceKey:'tree', tx, ty, texKey:rt.texKey, name:rt.name, hp:rt.hp, maxHp:rt.hp, h:rt.h, color:rt.color, drops:rt.drops }));
   }
   if (tile.biome === 'forest' && h < 0.38) {
     let rt = RESOURCE_TYPES['pine'];
-    entities.push(createEntity({
-      type: 'resource', resourceKey: 'pine',
-      tx, ty, texKey: rt.texKey, name: rt.name,
-      hp: rt.hp, maxHp: rt.hp, h: rt.h, color: rt.color, drops: rt.drops
-    }));
+    entities.push(createEntity({ type:'resource', resourceKey:'pine', tx, ty, texKey:rt.texKey, name:rt.name, hp:rt.hp, maxHp:rt.hp, h:rt.h, color:rt.color, drops:rt.drops }));
   }
   if (tile.biome === 'stone' && h < 0.14) {
     let rt = RESOURCE_TYPES['stone'];
-    entities.push(createEntity({
-      type: 'resource', resourceKey: 'stone',
-      tx, ty, texKey: rt.texKey, name: rt.name,
-      hp: rt.hp, maxHp: rt.hp, h: rt.h, color: rt.color, drops: rt.drops
-    }));
+    entities.push(createEntity({ type:'resource', resourceKey:'stone', tx, ty, texKey:rt.texKey, name:rt.name, hp:rt.hp, maxHp:rt.hp, h:rt.h, color:rt.color, drops:rt.drops }));
   }
   if (tile.biome === 'stone' && h >= 0.14 && h < 0.24) {
     let rt = RESOURCE_TYPES['ore'];
-    entities.push(createEntity({
-      type: 'resource', resourceKey: 'ore',
-      tx, ty, texKey: rt.texKey, name: rt.name,
-      hp: rt.hp, maxHp: rt.hp, h: rt.h, color: rt.color, drops: rt.drops
-    }));
+    entities.push(createEntity({ type:'resource', resourceKey:'ore', tx, ty, texKey:rt.texKey, name:rt.name, hp:rt.hp, maxHp:rt.hp, h:rt.h, color:rt.color, drops:rt.drops }));
   }
   if (tile.biome === 'sand' && h < 0.10) {
     let rt = RESOURCE_TYPES['cactus'];
-    entities.push(createEntity({
-      type: 'resource', resourceKey: 'cactus',
-      tx, ty, texKey: rt.texKey, name: rt.name,
-      hp: rt.hp, maxHp: rt.hp, h: rt.h, color: rt.color, drops: rt.drops
-    }));
+    entities.push(createEntity({ type:'resource', resourceKey:'cactus', tx, ty, texKey:rt.texKey, name:rt.name, hp:rt.hp, maxHp:rt.hp, h:rt.h, color:rt.color, drops:rt.drops }));
   }
   
   // Мирные
@@ -85,30 +71,26 @@ function getEntitiesAt(tx, ty, chunk) {
       let pIdx = Math.floor(h * 1000) % suitable.length;
       let pt = PEACEFUL_TYPES[suitable[pIdx]];
       entities.push(createEntity({
-        type: 'peaceful',
-        peacefulKey: suitable[pIdx],
-        tx, ty, texKey: pt.texKey, name: pt.name,
-        hp: pt.hp, maxHp: pt.hp,
-        dropName: pt.dropName, dropEmoji: pt.dropEmoji, dropTexKey: pt.dropTexKey,
-        dropHeal: pt.dropHeal, xpReward: pt.xpReward,
-        h: 10, color: pt.color, fleeTimer: 0, attackCooldown: 0,
-        ai: { state: 'idle', wanderTarget: null, idleTimer: 1000 + Math.random() * 3000, moveTimer: 0, moveCooldown: 0 }
+        type:'peaceful', peacefulKey:suitable[pIdx],
+        tx, ty, texKey:pt.texKey, name:pt.name,
+        hp:pt.hp, maxHp:pt.hp,
+        dropName:pt.dropName, dropEmoji:pt.dropEmoji, dropTexKey:pt.dropTexKey,
+        dropHeal:pt.dropHeal, xpReward:pt.xpReward,
+        h:10, color:pt.color, fleeTimer:0, attackCooldown:0,
+        ai:{ state:'idle', wanderTarget:null, idleTimer:1000+Math.random()*3000, moveTimer:0, moveCooldown:0 }
       }));
     }
   }
   
-  // Проверка на близость костра
+  // Проверка на костры
   let nearFire = false;
   if (tod === 'night') {
-    let objs = collectVisibleObjects();
-    for (let i = 0; i < objs.entities.length; i++) {
-      let e = objs.entities[i];
+    let allEnts = getVisibleEntities();
+    for (let i = 0; i < allEnts.length; i++) {
+      let e = allEnts[i];
       if (e.type === 'campfire') {
         let dist = Math.abs(e.tx - tx) + Math.abs(e.ty - ty);
-        if (dist <= e.lightRadius) {
-          nearFire = true;
-          break;
-        }
+        if (dist <= e.lightRadius) { nearFire = true; break; }
       }
     }
   }
@@ -128,16 +110,15 @@ function getEntitiesAt(tx, ty, chunk) {
       let typeIdx = Math.floor(h2 * 1000) % suitable.length;
       let mt = MONSTER_TYPES[suitable[typeIdx]];
       entities.push(createEntity({
-        type: 'monster',
-        monsterKey: suitable[typeIdx],
-        tx, ty, texKey: mt.texKey, name: mt.name,
-        hp: mt.hp, maxHp: mt.hp, damage: mt.damage,
-        moveDelay: mt.moveDelay, chaseRange: mt.chaseRange,
-        attackRange: mt.attackRange, attackCooldownTime: mt.attackCD,
-        attackCooldown: 0, h: 16, color: mt.color,
-        burnsInDay: mt.burnsInDay || false, neutral: mt.neutral || false,
-        xpReward: mt.xpReward, drops: mt.drops || [],
-        ai: { state: 'idle', wanderTarget: null, idleTimer: 1000 + Math.floor(h2 * 3000), moveTimer: 0, moveCooldown: 0, forgetTimer: 0 }
+        type:'monster', monsterKey:suitable[typeIdx],
+        tx, ty, texKey:mt.texKey, name:mt.name,
+        hp:mt.hp, maxHp:mt.hp, damage:mt.damage,
+        moveDelay:mt.moveDelay, chaseRange:mt.chaseRange,
+        attackRange:mt.attackRange, attackCooldownTime:mt.attackCD,
+        attackCooldown:0, h:16, color:mt.color,
+        burnsInDay:mt.burnsInDay||false, neutral:mt.neutral||false,
+        xpReward:mt.xpReward, drops:mt.drops||[],
+        ai:{ state:'idle', wanderTarget:null, idleTimer:1000+Math.floor(h2*3000), moveTimer:0, moveCooldown:0, forgetTimer:0 }
       }));
     }
   }

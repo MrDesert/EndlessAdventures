@@ -6,7 +6,7 @@ function canMoveTo(tx, ty, self) {
   let tile = getTile(tx, ty);
   if (tile.base === 1) return false;
   
-  let objs = collectVisibleObjects();
+  let objs = getVisibleEntities();
   for (let i = 0; i < objs.entities.length; i++) {
     let e = objs.entities[i];
     if (e === self) continue;

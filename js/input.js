@@ -82,7 +82,7 @@ canvas.addEventListener('click', function(e) {
   let mx = e.clientX - rect.left;
   let my = e.clientY - rect.top;
   
-  let objs = collectVisibleObjects();
+  let objs = getVisibleEntities();
   let targets = [];
   for (let i = 0; i < objs.entities.length; i++) {
     let ent = objs.entities[i];
