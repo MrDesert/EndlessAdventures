@@ -22,6 +22,13 @@ let SEED = Math.floor(Math.random() * 1000000);
 let camX = 0, camY = 0;
 let zoom = 2.0;
 
+let mouseX = 0, mouseY = 0;
+canvas.addEventListener('mousemove', function(e) {
+  let rect = canvas.getBoundingClientRect();
+  mouseX = e.clientX - rect.left;
+  mouseY = e.clientY - rect.top;
+});
+
 // Пауза
 let paused = false;
 
@@ -65,15 +72,16 @@ const MONSTER_TYPES = {
   shadow:   { name:'Тень', texKey:'monster_shadow', hp:15, damage:8, moveDelay:500, chaseRange:6, attackRange:2, attackCD:500, spawnTime:'night', biomes:['stone','forest'], maxPerChunk:1, color:'#222244', burnsInDay:true, xpReward:35, drops:[{name:'Тёмная пыль',emoji:'✨',texKey:'item_dark_dust',chance:0.6},{name:'Душа',emoji:'👻',texKey:'item_soul',chance:0.3}] },
   imp:      { name:'Бес', texKey:'monster_imp', hp:18, damage:6, moveDelay:350, chaseRange:5, attackRange:3, attackCD:500, spawnTime:'any', biomes:['stone','sand'], maxPerChunk:1, color:'#ff8800', xpReward:18, drops:[{name:'Рог беса',emoji:'👿',texKey:'item_imp_horn',chance:0.5},{name:'Сера',emoji:'💛',texKey:'item_sulfur',chance:0.4}] },
   wolf:     { name:'Волк', texKey:'monster_default', hp:22, damage:9, moveDelay:350, chaseRange:5, attackRange:1, attackCD:450, spawnTime:'day', biomes:['forest','grass','snow'], maxPerChunk:2, color:'#888', neutral:true, xpReward:12, drops:[{name:'Волчья шкура',emoji:'🐺',texKey:'item_wolf_pelt',chance:0.5},{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.6}] },
-  boar:     { name:'Кабан', texKey:'monster_default', hp:30, damage:11, moveDelay:400, chaseRange:4, attackRange:1, attackCD:500, spawnTime:'day', biomes:['grass','forest'], maxPerChunk:2, color:'#6b4c2b', neutral:true, xpReward:15, drops:[{name:'Кабанья шкура',emoji:'🐗',texKey:'item_boar_pelt',chance:0.5},{name:'Мясо',emoji:'🥩',texKey:'item_meat',chance:0.7}] }
+  boar:     { name:'Кабан', texKey:'monster_default', hp:30, damage:11, moveDelay:400, chaseRange:4, attackRange:1, attackCD:500, spawnTime:'day', biomes:['grass','forest'], maxPerChunk:2, color:'#6b4c2b', neutral:true, xpReward:15, drops:[{name:'Кабанья шкура',emoji:'🐗',texKey:'item_boar_pelt',chance:0.5},{name:'Мясо',emoji:'🥩',texKey:'item_meat',chance:0.7}] },
+  spider: { name:'🕷️ Паук', texKey:'monster_default', hp:15, damage:8, moveDelay:350, chaseRange:5, attackRange:1, attackCD:600, spawnTime:'any', biomes:['forest','grass'], maxPerChunk:3, color:'#444444', xpReward:12, drops:[{name:'🕸️ Паутина',emoji:'🕸️',texKey:'item_web',chance:0.7},{name:'🦷 Ядовитый клык',emoji:'🦷',texKey:'item_venom_fang',chance:0.3}] }
 };
 
 // Мирные
 const PEACEFUL_TYPES = {
-  cow:    { name:'Корова', texKey:'monster_default', hp:15, color:'#f5f5dc', dropName:'🥩 Мясо', dropEmoji:'🥩', dropTexKey:'item_meat', dropHeal:20, xpReward:5, biomes:['grass'], maxPerChunk:2 },
-  deer:   { name:'Олень', texKey:'monster_default', hp:12, color:'#c4a46c', dropName:'🍖 Оленина', dropEmoji:'🍖', dropTexKey:'item_venison', dropHeal:15, xpReward:8, biomes:['forest'], maxPerChunk:2 },
-  rabbit: { name:'Кролик', texKey:'monster_default', hp:5, color:'#ccc', dropName:'🍗 Крольчатина', dropEmoji:'🍗', dropTexKey:'item_rabbit_meat', dropHeal:8, xpReward:3, biomes:['grass','forest'], maxPerChunk:3 },
-  chicken:{ name:'Курица', texKey:'monster_default', hp:3, color:'#fff', dropName:'🍳 Яйцо', dropEmoji:'🍳', dropTexKey:'item_egg', dropHeal:5, xpReward:2, biomes:['grass'], maxPerChunk:2 }
+  cow:    { name:'Корова', texKey:'animal_cow', hp:15, color:'#f5f5dc', dropName:'🥩 Мясо', dropEmoji:'🥩', dropTexKey:'item_meat', dropHeal:20, xpReward:5, biomes:['grass'], maxPerChunk:2 },
+  deer:   { name:'Олень', texKey:'monster_default', hp:12, color:'#c4a46c', dropName:'🍖 Оленина', dropEmoji:'🍖', dropTexKey:'item_venison', dropHeal:15, xpReward:8, biomes:['forest','snow'], maxPerChunk:2 },
+  rabbit: { name:'Кролик', texKey:'animal_rabbit', hp:5, color:'#ccc', dropName:'🍗 Крольчатина', dropEmoji:'🍗', dropTexKey:'item_rabbit_meat', dropHeal:8, xpReward:3, biomes:['grass','forest'], maxPerChunk:3 },
+  chicken:{ name:'Курица', texKey:'animal_chicken', hp:3, color:'#fff', dropName:'🍳 Яйцо', dropEmoji:'🍳', dropTexKey:'item_egg', dropHeal:5, xpReward:2, biomes:['grass'], maxPerChunk:2 }
 };
 
 // Ресурсы
@@ -83,7 +91,7 @@ const RESOURCE_TYPES = {
   stone:  { name:'Камень', texKey:'stone', hp:30, color:'#888', h:8, drops:[{name:'Булыжник',emoji:'🪨',texKey:'item_rock',chance:1.0,count:2},{name:'Кремень',emoji:'💎',texKey:'item_flint',chance:0.3,count:1}] },
   ore:    { name:'Руда', texKey:'ore', hp:40, color:'#5b9bd5', h:9, drops:[{name:'Железная руда',emoji:'⛏️',texKey:'item_iron_ore',chance:1.0,count:2},{name:'Золотой самородок',emoji:'🌟',texKey:'item_gold_nugget',chance:0.2,count:1}] },
   cactus: { name:'Кактус', texKey:'cactus', hp:15, color:'#5a8a3a', h:12, drops:[{name:'Кактус',emoji:'🌵',texKey:'item_cactus',chance:1.0,count:1},{name:'Вода',emoji:'💧',texKey:'item_water',chance:0.5,count:1}] },
-snow_tree: { name:'Заснеженное дерево', texKey:'tree', hp:25, color:'#d0d8e0', h:14, drops:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',chance:1.0,count:2},{name:'Палка',emoji:'🥢',texKey:'item_stick',chance:0.5,count:1},{name:'Снежок',emoji:'❄️',texKey:'item_snowball',chance:0.6,count:1}] },
+snow_tree: { name:'Заснеженное дерево', texKey:'snow_tree', hp:25, color:'#d0d8e0', h:14, drops:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',chance:1.0,count:2},{name:'Палка',emoji:'🥢',texKey:'item_stick',chance:0.5,count:1},{name:'Снежок',emoji:'❄️',texKey:'item_snowball',chance:0.6,count:1}] },
 ice_rock: { name:'Ледяной камень', texKey:'stone', hp:35, color:'#c8d8f0', h:8, drops:[{name:'Булыжник',emoji:'🪨',texKey:'item_rock',chance:1.0,count:2},{name:'Лёд',emoji:'🧊',texKey:'item_ice',chance:0.5,count:1}] }
 };
 
@@ -106,7 +114,13 @@ const RECIPES = {
     ingredients:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',count:4}],
     result:{name:'📦 Сундук',emoji:'📦',texKey:'item_chest',count:1},
     placeable:true, isChest:true
-  }
+  },
+  'tent': {
+  name:'⛺ Палатка', emoji:'⛺', texKey:'item_tent',
+  ingredients:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',count:3},{name:'Кожа',emoji:'🧥',texKey:'item_leather',count:2}],
+  result:{name:'⛺ Палатка',emoji:'⛺',texKey:'item_tent',count:1},
+  placeable:true, isTent:true
+}
 };
 
 // Съедобное
@@ -135,30 +149,64 @@ const COOKING_RECIPES = {
 
 // Текстуры
 const TEXTURE_PATHS = {
-  tile_grass:'img/tile_grass.png', tile_water:'img/tile_water.png', tile_snow:'img/tile_snow.png', tile_sand:'img/tile_sand.png', tile_stone:'img/tile_stone.png',
-  player:'img/player.png', tree:'img/tree.png', pine:'img/pine.png', stone:'img/stone.png', ore:'img/ore.png', cactus:'img/cactus.png',
-  monster_zombie:'img/monster_zombie.png', monster_skeleton:'img/monster_skeleton.png',
-  monster_fallen:'img/monster_fallen.png', monster_demon:'img/monster_demon.png',
-  monster_ghoul:'img/monster_ghoul.png', monster_shadow:'img/monster_shadow.png',
-  monster_imp:'img/monster_imp.png', monster_default:'img/monster_default.png',
-  item_campfire:'img/item_campfire.png', item_torch:'img/item_torch.png', item_chest:'img/item_chest.png',
-  item_wood:'img/item_wood.png', item_stick:'img/item_stick.png', item_resin:'img/item_resin.png',
-  item_rock:'img/item_rock.png', item_flint:'img/item_flint.png',
-  item_iron_ore:'img/item_iron_ore.png', item_gold_nugget:'img/item_gold_nugget.png',
-  item_cactus:'img/item_cactus.png', item_water:'img/item_water.png',
-  item_bone:'img/item_bone.png', item_rotten_flesh:'img/item_rotten_flesh.png',
-  item_bow:'img/item_bow.png', item_fang:'img/item_fang.png', item_leather:'img/item_leather.png',
-  item_demon_heart:'img/item_demon_heart.png', item_ash:'img/item_ash.png',
-  item_potion:'img/item_potion.png', item_dark_dust:'img/item_dark_dust.png',
-  item_soul:'img/item_soul.png', item_imp_horn:'img/item_imp_horn.png', item_sulfur:'img/item_sulfur.png',
-  item_wolf_pelt:'img/item_wolf_pelt.png', item_boar_pelt:'img/item_boar_pelt.png',
-  item_meat:'img/item_meat.png', item_venison:'img/item_venison.png',
-  item_rabbit_meat:'img/item_rabbit_meat.png', item_egg:'img/item_egg.png',
+  tile_grass:'img/tile_grass.png', 
+  tile_water:'img/tile_water.png', 
+  tile_snow:'img/tile_snow.png', 
+  tile_sand:'img/tile_sand.png', 
+  tile_stone:'img/tile_stone.png',
+  player:'img/player.png', 
+  tree:'img/tree.png', 
+  snow_tree: 'img/snow_tree.png', 
+  pine:'img/pine.png', 
+  stone:'img/stone.png', 
+  ore:'img/ore.png', 
+  cactus:'img/cactus.png',
+  monster_zombie:'img/monster_zombie.png', 
+  monster_skeleton:'img/monster_skeleton.png',
+  monster_fallen:'img/monster_fallen.png', 
+  monster_demon:'img/monster_demon.png',
+  monster_ghoul:'img/monster_ghoul.png', 
+  monster_shadow:'img/monster_shadow.png',
+  monster_imp:'img/monster_imp.png', 
+  monster_default:'img/monster_default.png',
+  animal_cow:'img/animal_cow.png',
+  animal_chicken:'img/animal_chicken.png',
+  animal_rabbit: 'img/animal_rabbit.png',
+  item_campfire:'img/item_campfire.png', 
+  item_torch:'img/item_torch.png', 
+  item_chest:'img/item_chest.png',
+  item_wood:'img/item_wood.png', 
+  item_stick:'img/item_stick.png', 
+  item_resin:'img/item_resin.png',
+  item_rock:'img/item_rock.png', 
+  item_flint:'img/item_flint.png',
+  item_iron_ore:'img/item_iron_ore.png', 
+  item_gold_nugget:'img/item_gold_nugget.png',
+  item_cactus:'img/item_cactus.png', 
+  item_water:'img/item_water.png',
+  item_bone:'img/item_bone.png', 
+  item_rotten_flesh:'img/item_rotten_flesh.png',
+  item_bow:'img/item_bow.png', 
+  item_fang:'img/item_fang.png', 
+  item_leather:'img/item_leather.png',
+  item_demon_heart:'img/item_demon_heart.png', 
+  item_ash:'img/item_ash.png',
+  item_potion:'img/item_potion.png', 
+  item_dark_dust:'img/item_dark_dust.png',
+  item_soul:'img/item_soul.png', 
+  item_imp_horn:'img/item_imp_horn.png', 
+  item_sulfur:'img/item_sulfur.png',
+  item_wolf_pelt:'img/item_wolf_pelt.png', 
+  item_boar_pelt:'img/item_boar_pelt.png',
+  item_meat:'img/item_meat.png', 
+  item_venison:'img/item_venison.png',
+  item_rabbit_meat:'img/item_rabbit_meat.png', 
+  item_egg:'img/item_egg.png',
   item_cooked_meat:'img/item_cooked_meat.png',
-    item_cooked_venison:'img/item_cooked_venison.png',
-    item_cooked_rabbit:'img/item_cooked_rabbit.png',
-    item_snowball:'img/item_snowball.png',
-item_ice:'img/item_ice.png',
+  item_cooked_venison:'img/item_cooked_venison.png',
+  item_cooked_rabbit:'img/item_cooked_rabbit.png',
+  item_snowball:'img/item_snowball.png',
+  item_ice:'img/item_ice.png',
 };
 
 let openCampfire = null; // открытый костёр
@@ -566,6 +614,7 @@ function useSelectedItem() {
   if (item.name === '🔥 Костёр') { if(placeItem('campfire','#ff6600',4)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
   if (item.name === '🕯️ Факел') { if(placeItem('torch','#ffaa00',2)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
   if (item.name === '📦 Сундук') { if(placeItem('chest','#8B4513',0)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
+  if (item.name === '⛺ Палатка') { if(placeItem('tent','#a08860',0)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
   
   // Взять в руку
   player.heldItem = { slot: selectedSlot, item: item };
@@ -719,6 +768,7 @@ function countPeacefulInChunk(chunk, key) {
 }
 
 function getVisibleEntities() {
+  
   let all = [], range = 22;
   let minTX = player.tx - range, maxTX = player.tx + range, minTY = player.ty - range, maxTY = player.ty + range;
   let minCX = Math.floor(minTX/CHUNK_SIZE), maxCX = Math.floor(maxTX/CHUNK_SIZE);
@@ -769,8 +819,16 @@ if (tile.biome === 'snow') {
   
   if (h2<0.04 && !nearFire) {
     let typeKeys=Object.keys(MONSTER_TYPES);
-    let suitable=typeKeys.filter(function(k){let mt=MONSTER_TYPES[k];if(mt.spawnTime!==tod&&mt.spawnTime!=='any')return false;if(mt.biomes.indexOf(tile.biome)===-1)return false;if(chunk&&countMonstersInChunk(chunk,k)>=mt.maxPerChunk)return false;if(k==='imp'&&Math.random()>0.3)return false;return true;});
+    let suitable=typeKeys.filter(function(k){
+      let mt=MONSTER_TYPES[k];
+      if(mt.spawnTime!==tod&&mt.spawnTime!=='any')return false;
+      if(mt.biomes.indexOf(tile.biome)===-1)return false;
+      if(chunk&&countMonstersInChunk(chunk,k)>=mt.maxPerChunk)return false;
+      if(k==='imp'&&Math.random()>0.3)return false;return true;
+            // Пауки днём реже
+    if (k === 'spider' && tod === 'day' && Math.random() > 0.3) return false;});
     if(suitable.length>0){let typeIdx=Math.floor(h2*1000)%suitable.length,mt=MONSTER_TYPES[suitable[typeIdx]];
+
       entities.push(createEntity({type:'monster',monsterKey:suitable[typeIdx],tx,ty,texKey:mt.texKey,name:mt.name,hp:mt.hp,maxHp:mt.hp,damage:mt.damage,moveDelay:mt.moveDelay,chaseRange:mt.chaseRange,attackRange:mt.attackRange,attackCooldownTime:mt.attackCD,attackCooldown:0,h:16,color:mt.color,burnsInDay:mt.burnsInDay||false,neutral:mt.neutral||false,xpReward:mt.xpReward,drops:mt.drops||[],ai:{state:'idle',wanderTarget:null,idleTimer:1000+Math.floor(h2*3000),moveTimer:0,moveCooldown:0,forgetTimer:0}}));}
   }
   return entities;
@@ -872,7 +930,8 @@ function updateAI(e, dt, isPeaceful) {
     }
   } else {
     let isNeutral = e.neutral === true, shouldChase = false;
-    if (!isNeutral) { if (distToPlayer <= e.chaseRange && player.hp > 0) shouldChase = true; }
+    if (!isNeutral) { let effectiveChaseRange = player.inTent ? e.chaseRange / 2 : e.chaseRange;
+if (distToPlayer <= effectiveChaseRange && player.hp > 0) shouldChase = true; }
     else { if (e._wasAttacked && distToPlayer <= e.chaseRange && player.hp > 0) shouldChase = true; }
     if (shouldChase) { ai.state = 'chase'; ai.forgetTimer = 5000; }
     if (ai.state === 'chase') {
@@ -912,6 +971,24 @@ function attackEntity(target) {
   target.hp -= player.damage; target.attackCooldown = 400; player.attackCooldown = player.attackCooldownTime;
   
   if (target.type === 'resource') {
+    // Шанс спавна паука при разрушении дерева/сосны
+if ((target.resourceKey === 'tree' || target.resourceKey === 'pine') && Math.random() < 0.15) {
+  let spiderType = MONSTER_TYPES['spider'];
+  let ck = Math.floor(target.tx/CHUNK_SIZE)+','+Math.floor(target.ty/CHUNK_SIZE);
+  if (chunks[ck]) {
+    chunks[ck].entities.push(createEntity({
+      type:'monster', monsterKey:'spider',
+      tx:target.tx, ty:target.ty, texKey:'monster_default', name:'🕷️ Паук',
+      hp:spiderType.hp, maxHp:spiderType.hp, damage:spiderType.damage,
+      moveDelay:spiderType.moveDelay, chaseRange:spiderType.chaseRange,
+      attackRange:spiderType.attackRange, attackCooldownTime:spiderType.attackCD,
+      attackCooldown:0, h:10, color:spiderType.color,
+      burnsInDay:false, neutral:false, xpReward:spiderType.xpReward, drops:spiderType.drops,
+      ai:{state:'chase',wanderTarget:null,idleTimer:500,moveTimer:0,moveCooldown:0,forgetTimer:5000}
+    }));
+    addLog('🕷️ Паук упал с дерева!');
+  }
+}
     addLog('⛏️ Рубим ' + target.name + '...');
     if (target.hp <= 0) { target.hp = 0; addLog('💥 ' + target.name + ' сломан!');
       if (target.drops) for (let d = 0; d < target.drops.length; d++) if (Math.random() < target.drops[d].chance) { let cnt = target.drops[d].count || 1; for (let c = 0; c < cnt; c++) addToInventoryOrDrop({ name: target.drops[d].name, emoji: target.drops[d].emoji, texKey: target.drops[d].texKey, count: 1 }, target.tx, target.ty); } }
@@ -994,6 +1071,8 @@ function placeItem(typeKey, color, radius) {
   if (!chunks[ck]) ensureChunk(Math.floor(nx/CHUNK_SIZE), Math.floor(ny/CHUNK_SIZE));
   if (typeKey === 'chest') {
     chunks[ck].entities.push(createEntity({ type:'chest', tx:nx, ty:ny, name:'📦 Сундук', hp:999, maxHp:999, h:8, color:color, storage: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null] }));
+  } else if (typeKey === 'tent') {
+  chunks[ck].entities.push(createEntity({ type:'tent', tx:nx, ty:ny, name:'⛺ Палатка', hp:999, maxHp:999, h:14, color:'#a08860' }));
   } else {
     chunks[ck].entities.push(createEntity({ type:'campfire', tx:nx, ty:ny, name:'Костёр', hp:999, maxHp:999, h:6, color:color, lightRadius:radius }));
   }
@@ -1252,7 +1331,33 @@ if(base===5){
 }
     ctx.restore();
 }
-function drawTileTex(tx,ty,base){let pos=tileToScreen(tx,ty),keys=['tile_grass','tile_water','tile_sand','tile_stone','','tile_snow'],img=getTex(keys[base]),hw=TILE_HW*zoom,hh=TILE_HH*zoom;ctx.save();if(img)ctx.drawImage(img,pos.x-hw,pos.y-hh,TILE_W*zoom,TILE_H*zoom);else{ctx.restore();drawTileCode(tx,ty,base);return;}ctx.restore();}
+function drawTileTex(tx, ty, base) {
+  let pos = tileToScreen(tx, ty);
+  let keys = ['tile_grass', 'tile_water', 'tile_sand', 'tile_stone', '', 'tile_snow'];
+  let img = getTex(keys[base]);
+  let hw = TILE_HW * zoom;
+  let hh = TILE_HH * zoom;
+
+  ctx.save();
+  if (img) {
+    // Сначала создаём clipping region в форме ромба
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y - hh);       // верх
+    ctx.lineTo(pos.x + hw, pos.y);       // право
+    ctx.lineTo(pos.x, pos.y + hh);       // низ
+    ctx.lineTo(pos.x - hw, pos.y);       // лево
+    ctx.closePath();
+    ctx.clip();  // обрезаем всё что вне ромба
+    
+    // Теперь рисуем текстуру — она будет обрезана ромбом
+    ctx.drawImage(img, pos.x - hw, pos.y - hh, TILE_W * zoom, TILE_H * zoom);
+  } else {
+    ctx.restore();
+    drawTileCode(tx, ty, base);
+    return;
+  }
+  ctx.restore();
+}
 
 function drawEntityCode(e){
   let pos=tileToScreen(e.rx,e.ry),h=(e.h||12)*zoom,topY=pos.y-h;ctx.save();
@@ -1260,8 +1365,22 @@ function drawEntityCode(e){
   ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(pos.x,pos.y+2*zoom,6*zoom,3*zoom,0,0,Math.PI*2);ctx.fill();
   if(e.type==='dropped_item'){ctx.fillStyle='#ffcc00';ctx.beginPath();ctx.arc(pos.x,topY+4*zoom,4*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('📦',pos.x,topY-1*zoom);if(e.items&&e.items.length>0){ctx.fillStyle='#fff';ctx.font=(6*zoom)+'px monospace';ctx.fillText(e.items.length+' предм.',pos.x,topY-9*zoom);}}
   else if(e.type==='chest'){ctx.fillStyle='#8B4513';ctx.fillRect(pos.x-7*zoom,topY,14*zoom,10*zoom);ctx.strokeStyle='#000';ctx.lineWidth=1.5;ctx.strokeRect(pos.x-7*zoom,topY,14*zoom,10*zoom);ctx.fillStyle='#A0522D';ctx.fillRect(pos.x-6*zoom,topY+2*zoom,12*zoom,3*zoom);ctx.fillStyle='#FFD700';ctx.fillRect(pos.x-2*zoom,topY+4*zoom,4*zoom,3*zoom);ctx.fillStyle='#fff';ctx.font='bold '+(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('📦',pos.x,topY-4*zoom);}
+  else if(e.type==='tent'){
+  ctx.fillStyle='#a08860';ctx.fillRect(pos.x-8*zoom,topY,16*zoom,12*zoom);
+  ctx.fillStyle='#8B7355';ctx.beginPath();ctx.moveTo(pos.x-8*zoom,topY);ctx.lineTo(pos.x,topY-8*zoom);ctx.lineTo(pos.x+8*zoom,topY);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('⛺',pos.x,topY-5*zoom);
+}
   else if(e.type==='campfire'){ctx.fillStyle=e.color||'#ff6600';ctx.beginPath();ctx.arc(pos.x,topY+3*zoom,5*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(pos.x,topY+1*zoom,3*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('🔥',pos.x,topY-3*zoom);}
-  else if(e.type==='monster'){let col=(e.attackCooldown>0&&Math.floor(e.attackCooldown/100)%2===0)?'#fff':(e.color||'#cc3333');ctx.fillStyle=col;ctx.beginPath();ctx.arc(pos.x,topY+h*0.4,6*zoom,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1.2;ctx.stroke();let eyeY=topY+h*0.25;ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(pos.x-2*zoom,eyeY,1.6*zoom,0,Math.PI*2);ctx.arc(pos.x+2*zoom,eyeY,1.6*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(pos.x-2*zoom,eyeY,0.7*zoom,0,Math.PI*2);ctx.arc(pos.x+2*zoom,eyeY,0.7*zoom,0,Math.PI*2);ctx.fill();if(e.burnsInDay&&getTimeOfDay()==='day'){ctx.fillStyle='rgba(255,100,0,0.5)';ctx.beginPath();ctx.arc(pos.x,topY-2*zoom,4*zoom,0,Math.PI*2);ctx.fill();}if(e.neutral){ctx.fillStyle='#ff0';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('⚠️',pos.x,topY-5*zoom);}let barW=12*zoom,barH=2*zoom,barX=pos.x-barW/2,barY=topY-9*zoom;ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);ctx.fillStyle='#ff3333';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);ctx.fillStyle='#fff';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,topY-11*zoom);ctx.fillStyle='#ff5555';ctx.fillText(e.hp+'/'+e.maxHp,pos.x,topY+1*zoom);}
+  else if(e.type==='monster'){let col=(e.attackCooldown>0&&Math.floor(e.attackCooldown/100)%2===0)?'#fff':(e.color||'#cc3333');ctx.fillStyle=col;ctx.beginPath();ctx.arc(pos.x,topY+h*0.4,6*zoom,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1.2;ctx.stroke();let eyeY=topY+h*0.25;ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(pos.x-2*zoom,eyeY,1.6*zoom,0,Math.PI*2);ctx.arc(pos.x+2*zoom,eyeY,1.6*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(pos.x-2*zoom,eyeY,0.7*zoom,0,Math.PI*2);ctx.arc(pos.x+2*zoom,eyeY,0.7*zoom,0,Math.PI*2);ctx.fill();if(e.burnsInDay&&getTimeOfDay()==='day'){ctx.fillStyle='rgba(255,100,0,0.5)';ctx.beginPath();ctx.arc(pos.x,topY-2*zoom,4*zoom,0,Math.PI*2);ctx.fill();}if(e.neutral){ctx.fillStyle='#ff0';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('⚠️',pos.x,topY-5*zoom);}let barW=12*zoom,barH=2*zoom,barX=pos.x-barW/2,barY=topY-9*zoom;ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);ctx.fillStyle='#ff3333';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);
+  // Проверяем наведение мыши
+let dx = mouseX - pos.x;
+let dy = mouseY - (topY + h*0.4);
+let dist = Math.sqrt(dx*dx + dy*dy);
+if (dist < 30 * zoom) {
+  ctx.fillStyle='#fff';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';
+  ctx.fillText(e.name,pos.x,topY-11*zoom);
+  ctx.fillStyle='#ff5555';ctx.fillText(e.hp+'/'+e.maxHp,pos.x,topY+1*zoom);
+}}
   else if(e.type==='peaceful'){ctx.fillStyle=e.color||'#f5f5dc';ctx.beginPath();ctx.arc(pos.x,topY+h*0.4,5*zoom,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.stroke();let eyeY=topY+h*0.3;ctx.fillStyle='#000';ctx.beginPath();ctx.arc(pos.x-1.5*zoom,eyeY,0.8*zoom,0,Math.PI*2);ctx.arc(pos.x+1.5*zoom,eyeY,0.8*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,topY-7*zoom);ctx.fillStyle='#8f8';ctx.fillText('❤️'+e.hp,pos.x,topY+2*zoom);}
   else if(e.type==='resource'){let w=6*zoom;ctx.fillStyle=e.color||'#888';ctx.fillRect(pos.x-w,topY,w*2,h*0.6);ctx.strokeStyle='#000';ctx.lineWidth=0.8;ctx.strokeRect(pos.x-w,topY,w*2,h*0.6);ctx.fillStyle=lighten(e.color||'#888',1.3);ctx.fillRect(pos.x-w-0.8*zoom,topY-2*zoom,w*2+1.6*zoom,3*zoom);ctx.strokeRect(pos.x-w-0.8*zoom,topY-2*zoom,w*2+1.6*zoom,3*zoom);let barW=10*zoom,barH=1.5*zoom,barX=pos.x-barW/2,barY=topY-6*zoom;ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);ctx.fillStyle='#aaa';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);ctx.fillStyle='#fff';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,topY-8*zoom);}
   ctx.restore();
@@ -1269,15 +1388,63 @@ function drawEntityCode(e){
 
 function drawEntityTex(e){
   if(e.type==='campfire'||e.type==='chest'||e.type==='dropped_item'){drawEntityCode(e);return;}
-  let img=e.texKey?getTex(e.texKey):null;if(!img&&(e.type==='monster'||e.type==='peaceful'))img=getTex('monster_default');if(!img){drawEntityCode(e);return;}
-  let pos=tileToScreen(e.rx,e.ry),h=(e.h||12)*zoom;ctx.save();
-  if(e.hp<=0){ctx.globalAlpha=0.5;let iw=img.width,ih=img.height,scale=(h*1.2)/ih,dw=iw*scale*zoom,dh=ih*scale*zoom;ctx.drawImage(img,pos.x-dw/2,pos.y-dh,dw,dh);ctx.globalAlpha=1;ctx.fillStyle='#666';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('сломан',pos.x,pos.y);ctx.restore();return;}
+  
+  let img=e.texKey?getTex(e.texKey):null;
+  if(!img&&(e.type==='monster'||e.type==='peaceful'))img=getTex('monster_default');
+  
+  // Если нет текстуры — рисуем кодом
+  if(!img){drawEntityCode(e);return;}
+  
+  let pos=tileToScreen(e.rx,e.ry),h=(e.h||12)*zoom;
+  ctx.save();
+  
+  if(e.hp<=0){
+    ctx.globalAlpha=0.5;
+    let iw=img.width,ih=img.height,scale=(h*1.2)/ih,dw=iw*scale*zoom,dh=ih*scale*zoom;
+    ctx.drawImage(img,pos.x-dw/2,pos.y-dh,dw,dh);
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#666';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';
+    ctx.fillText('сломан',pos.x,pos.y);
+    ctx.restore();return;
+  }
+  
   let iw=img.width,ih=img.height,scale=(h*1.2)/ih,dw=iw*scale*zoom,dh=ih*scale*zoom,topY=pos.y-h;
+  
   if((e.type==='monster'||e.type==='peaceful')&&e.attackCooldown>0&&Math.floor(e.attackCooldown/100)%2===0)ctx.globalAlpha=0.5;
-  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(pos.x,pos.y+2*zoom,dw*0.35,dh*0.12,0,0,Math.PI*2);ctx.fill();ctx.drawImage(img,pos.x-dw/2,pos.y-dh,dw,dh);ctx.globalAlpha=1;
-  if(e.type==='monster'){if(e.burnsInDay&&getTimeOfDay()==='day'){ctx.fillStyle='rgba(255,100,0,0.5)';ctx.beginPath();ctx.arc(pos.x,pos.y-h-2*zoom,4*zoom,0,Math.PI*2);ctx.fill();}if(e.neutral){ctx.fillStyle='#ff0';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('⚠️',pos.x,pos.y-h-5*zoom);}let barW=12*zoom,barH=2*zoom,barX=pos.x-barW/2,barY=pos.y-h-9*zoom;ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);ctx.fillStyle='#ff3333';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);ctx.fillStyle='#fff';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,pos.y-h-11*zoom);ctx.fillStyle='#ff5555';ctx.fillText(e.hp+'/'+e.maxHp,pos.x,pos.y-h+1*zoom);}
-  else if(e.type==='peaceful'){ctx.fillStyle='#fff';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,pos.y-h-7*zoom);ctx.fillStyle='#8f8';ctx.fillText('❤️'+e.hp,pos.x,pos.y-h+2*zoom);}
-  else if(e.type==='resource'){let barW=10*zoom,barH=1.5*zoom,barX=pos.x-barW/2,barY=pos.y-h-6*zoom;ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);ctx.fillStyle='#aaa';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);ctx.fillStyle='#fff';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,pos.y-h-8*zoom);}
+  
+  // Тень
+  ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();
+  ctx.ellipse(pos.x,pos.y+2*zoom,dw*0.35,dh*0.12,0,0,Math.PI*2);ctx.fill();
+  
+  // Текстура
+  ctx.drawImage(img,pos.x-dw/2,pos.y-dh,dw,dh);
+  ctx.globalAlpha=1;
+  
+// Проверяем наведение мыши
+let dx=mouseX-pos.x,dy=mouseY-(pos.y-h+h*0.4),dist=Math.sqrt(dx*dx+dy*dy);
+
+// HP бар только при наведении
+if(dist<30*zoom){
+  let barW=12*zoom,barH=2*zoom,barX=pos.x-barW/2,barY=pos.y-h-9*zoom;
+  ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);
+  ctx.fillStyle='#ff3333';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);
+}
+  
+  // Имя и HP только при наведении
+  if(dist<30*zoom){
+    if(e.type==='monster'){
+      if(e.burnsInDay&&getTimeOfDay()==='day'){ctx.fillStyle='rgba(255,100,0,0.5)';ctx.beginPath();ctx.arc(pos.x,pos.y-h-2*zoom,4*zoom,0,Math.PI*2);ctx.fill();}
+      if(e.neutral){ctx.fillStyle='#ff0';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('⚠️',pos.x,pos.y-h-5*zoom);}
+      ctx.fillStyle='#fff';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';
+      ctx.fillText(e.name,pos.x,pos.y-h-11*zoom);
+      ctx.fillStyle='#ff5555';ctx.fillText(e.hp+'/'+e.maxHp,pos.x,pos.y-h+1*zoom);
+    }else if(e.type==='peaceful'){
+      ctx.fillStyle='#fff';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';
+      ctx.fillText(e.name,pos.x,pos.y-h-7*zoom);
+      ctx.fillStyle='#8f8';ctx.fillText('❤️'+e.hp,pos.x,pos.y-h+2*zoom);
+    }
+  }
+  
   ctx.restore();
 }
 
@@ -1605,6 +1772,15 @@ function gameLoop(ts){
     cycleTime=(cycleTime+dt)%FULL_CYCLE;
     validateMonstersForTimeOfDay();
     burnMonstersInDay(dt);
+    // Проверка в палатке
+player.inTent = false;
+let all = getVisibleEntities();
+for (let e of all) {
+  if (e.type === 'tent' && e.tx === player.tx && e.ty === player.ty) {
+    player.inTent = true;
+    break;
+  }
+}
     handleInput(ts);
     if(player.attackCooldown>0)player.attackCooldown-=dt;
     let objs=collectVisibleObjects();
