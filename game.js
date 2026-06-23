@@ -20,7 +20,7 @@ let SEED = Math.floor(Math.random() * 1000000);
 
 // Камера и зум
 let camX = 0, camY = 0;
-let zoom = 2.0;
+let zoom = 3.0;
 
 let mouseX = 0, mouseY = 0;
 canvas.addEventListener('mousemove', function(e) {
@@ -71,17 +71,17 @@ const MONSTER_TYPES = {
   ghoul:    { name:'Упырь', texKey:'monster_ghoul', hp:30, damage:12, moveDelay:250, chaseRange:8, attackRange:1, attackCD:350, spawnTime:'night', biomes:['forest','grass'], maxPerChunk:2, color:'#9966cc', burnsInDay:true, xpReward:30, drops:[{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.5},{name:'Зелье',emoji:'🧪',texKey:'item_potion',chance:0.2}] },
   shadow:   { name:'Тень', texKey:'monster_shadow', hp:15, damage:8, moveDelay:500, chaseRange:6, attackRange:2, attackCD:500, spawnTime:'night', biomes:['stone','forest'], maxPerChunk:1, color:'#222244', burnsInDay:true, xpReward:35, drops:[{name:'Тёмная пыль',emoji:'✨',texKey:'item_dark_dust',chance:0.6},{name:'Душа',emoji:'👻',texKey:'item_soul',chance:0.3}] },
   imp:      { name:'Бес', texKey:'monster_imp', hp:18, damage:6, moveDelay:350, chaseRange:5, attackRange:3, attackCD:500, spawnTime:'any', biomes:['stone','sand'], maxPerChunk:1, color:'#ff8800', xpReward:18, drops:[{name:'Рог беса',emoji:'👿',texKey:'item_imp_horn',chance:0.5},{name:'Сера',emoji:'💛',texKey:'item_sulfur',chance:0.4}] },
-  wolf:     { name:'Волк', texKey:'monster_default', hp:22, damage:9, moveDelay:350, chaseRange:5, attackRange:1, attackCD:450, spawnTime:'day', biomes:['forest','grass','snow'], maxPerChunk:2, color:'#888', neutral:true, xpReward:12, drops:[{name:'Волчья шкура',emoji:'🐺',texKey:'item_wolf_pelt',chance:0.5},{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.6}] },
-  boar:     { name:'Кабан', texKey:'monster_default', hp:30, damage:11, moveDelay:400, chaseRange:4, attackRange:1, attackCD:500, spawnTime:'day', biomes:['grass','forest'], maxPerChunk:2, color:'#6b4c2b', neutral:true, xpReward:15, drops:[{name:'Кабанья шкура',emoji:'🐗',texKey:'item_boar_pelt',chance:0.5},{name:'Мясо',emoji:'🥩',texKey:'item_meat',chance:0.7}] },
-  spider: { name:'🕷️ Паук', texKey:'monster_default', hp:15, damage:8, moveDelay:350, chaseRange:5, attackRange:1, attackCD:600, spawnTime:'any', biomes:['forest','grass'], maxPerChunk:3, color:'#444444', xpReward:12, drops:[{name:'🕸️ Паутина',emoji:'🕸️',texKey:'item_web',chance:0.7},{name:'🦷 Ядовитый клык',emoji:'🦷',texKey:'item_venom_fang',chance:0.3}] }
+  wolf:     { name:'Волк', texKey:'monster_wolf', hp:22, damage:9, moveDelay:350, chaseRange:5, attackRange:1, attackCD:450, spawnTime:'day', biomes:['forest','grass','snow'], maxPerChunk:1, color:'#888', neutral:true, xpReward:12, drops:[{name:'Волчья шкура',emoji:'🐺',texKey:'item_wolf_pelt',chance:0.5},{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.6}] },
+  boar:     { name:'Кабан', texKey:'monster_boar', hp:30, damage:11, moveDelay:400, chaseRange:4, attackRange:1, attackCD:500, spawnTime:'day', biomes:['grass','forest'], maxPerChunk:1, color:'#6b4c2b', neutral:true, xpReward:15, drops:[{name:'Кабанья шкура',emoji:'🐗',texKey:'item_boar_pelt',chance:0.5},{name:'Мясо',emoji:'🥩',texKey:'item_meat',chance:0.7}] },
+  spider: { name:'🕷️ Паук', texKey:'monster_spider', hp:15, damage:8, moveDelay:350, chaseRange:5, attackRange:1, attackCD:600, spawnTime:'any', biomes:['forest','grass'], maxPerChunk:1, color:'#444444', xpReward:12, drops:[{name:'🕸️ Паутина',emoji:'🕸️',texKey:'item_web',chance:0.7},{name:'🦷 Ядовитый клык',emoji:'🦷',texKey:'item_venom_fang',chance:0.3}] }
 };
 
 // Мирные
 const PEACEFUL_TYPES = {
-  cow:    { name:'Корова', texKey:'animal_cow', hp:15, color:'#f5f5dc', dropName:'🥩 Мясо', dropEmoji:'🥩', dropTexKey:'item_meat', dropHeal:20, xpReward:5, biomes:['grass'], maxPerChunk:2 },
-  deer:   { name:'Олень', texKey:'monster_default', hp:12, color:'#c4a46c', dropName:'🍖 Оленина', dropEmoji:'🍖', dropTexKey:'item_venison', dropHeal:15, xpReward:8, biomes:['forest','snow'], maxPerChunk:2 },
-  rabbit: { name:'Кролик', texKey:'animal_rabbit', hp:5, color:'#ccc', dropName:'🍗 Крольчатина', dropEmoji:'🍗', dropTexKey:'item_rabbit_meat', dropHeal:8, xpReward:3, biomes:['grass','forest'], maxPerChunk:3 },
-  chicken:{ name:'Курица', texKey:'animal_chicken', hp:3, color:'#fff', dropName:'🍳 Яйцо', dropEmoji:'🍳', dropTexKey:'item_egg', dropHeal:5, xpReward:2, biomes:['grass'], maxPerChunk:2 }
+  cow:    { name:'Корова', texKey:'animal_cow', hp:15, color:'#f5f5dc', dropName:'🥩 Мясо', dropEmoji:'🥩', dropTexKey:'item_meat', dropHeal:20, xpReward:5, biomes:['grass'], maxPerChunk:1 },
+  deer:   { name:'Олень', texKey:'animal_deer', hp:12, color:'#c4a46c', dropName:'🍖 Оленина', dropEmoji:'🍖', dropTexKey:'item_venison', dropHeal:15, xpReward:8, biomes:['forest', 'snow'], maxPerChunk:1 },
+  rabbit: { name:'Кролик', texKey:'animal_rabbit', hp:5, color:'#ccc', dropName:'🍗 Крольчатина', dropEmoji:'🍗', dropTexKey:'item_rabbit_meat', dropHeal:8, xpReward:3, biomes:['grass','forest'], maxPerChunk:2 },
+  chicken:{ name:'Курица', texKey:'animal_chicken', hp:3, color:'#fff', dropName:'🍳 Яйцо', dropEmoji:'🍳', dropTexKey:'item_egg', dropHeal:5, xpReward:2, biomes:['grass'], maxPerChunk:1 }
 };
 
 // Ресурсы
@@ -89,7 +89,7 @@ const RESOURCE_TYPES = {
   tree:   { name:'Дерево', texKey:'tree', hp:20, color:'#6b4c2b', h:14, drops:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',chance:1.0,count:2},{name:'Палка',emoji:'🥢',texKey:'item_stick',chance:0.5,count:1}] },
   pine:   { name:'Сосна', texKey:'pine', hp:25, color:'#3a6b2f', h:16, drops:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',chance:1.0,count:3},{name:'Смола',emoji:'🟤',texKey:'item_resin',chance:0.4,count:1}] },
   stone:  { name:'Камень', texKey:'stone', hp:30, color:'#888', h:8, drops:[{name:'Булыжник',emoji:'🪨',texKey:'item_rock',chance:1.0,count:2},{name:'Кремень',emoji:'💎',texKey:'item_flint',chance:0.3,count:1}] },
-  ore:    { name:'Руда', texKey:'ore', hp:40, color:'#5b9bd5', h:9, drops:[{name:'Железная руда',emoji:'⛏️',texKey:'item_iron_ore',chance:1.0,count:2},{name:'Золотой самородок',emoji:'🌟',texKey:'item_gold_nugget',chance:0.2,count:1}] },
+  ore:    { name:'Руда', texKey:'ore', hp:40, color:'#5b9bd5', h:9, drops:[{name:'Железная руда',emoji:'⛏️',texKey:'item_iron_ore',chance:1.0,count:2},{name:'Золотой самородок',emoji:'🌟',texKey:'item_gold_nugget',chance:0.1,count:1}] },
   cactus: { name:'Кактус', texKey:'cactus', hp:15, color:'#5a8a3a', h:12, drops:[{name:'Кактус',emoji:'🌵',texKey:'item_cactus',chance:1.0,count:1},{name:'Вода',emoji:'💧',texKey:'item_water',chance:0.5,count:1}] },
 snow_tree: { name:'Заснеженное дерево', texKey:'snow_tree', hp:25, color:'#d0d8e0', h:14, drops:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',chance:1.0,count:2},{name:'Палка',emoji:'🥢',texKey:'item_stick',chance:0.5,count:1},{name:'Снежок',emoji:'❄️',texKey:'item_snowball',chance:0.6,count:1}] },
 ice_rock: { name:'Ледяной камень', texKey:'stone', hp:35, color:'#c8d8f0', h:8, drops:[{name:'Булыжник',emoji:'🪨',texKey:'item_rock',chance:1.0,count:2},{name:'Лёд',emoji:'🧊',texKey:'item_ice',chance:0.5,count:1}] }
@@ -117,7 +117,7 @@ const RECIPES = {
   },
   'tent': {
   name:'⛺ Палатка', emoji:'⛺', texKey:'item_tent',
-  ingredients:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',count:3},{name:'Кожа',emoji:'🧥',texKey:'item_leather',count:2}],
+  ingredients:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',count:3},{name:'Волчья шкура',emoji:'🐺',texKey:'item_wolf_pelt',count:2}],
   result:{name:'⛺ Палатка',emoji:'⛺',texKey:'item_tent',count:1},
   placeable:true, isTent:true
 }
@@ -167,9 +167,13 @@ const TEXTURE_PATHS = {
   monster_demon:'img/monster_demon.png',
   monster_ghoul:'img/monster_ghoul.png', 
   monster_shadow:'img/monster_shadow.png',
-  monster_imp:'img/monster_imp.png', 
+  monster_imp:'img/monster_imp.png',
+  monster_spider: 'img/monster_spider.png',
+  monster_wolf: 'img/monster_wolf.png',
+  monster_boar:'img/monster_boar.png',
   monster_default:'img/monster_default.png',
   animal_cow:'img/animal_cow.png',
+  animal_deer: 'img/animal_deer.png',
   animal_chicken:'img/animal_chicken.png',
   animal_rabbit: 'img/animal_rabbit.png',
   item_campfire:'img/item_campfire.png', 
