@@ -50,3 +50,6 @@ canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
 .stat-bar-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-family: monospace; text-shadow: 0 0 4px rgba(0,0,0,0.9); pointer-events: none; z-index: 1; }
 .stat-details { font-size: 10px; color: #aaa; font-family: monospace; line-height: 1.5; background: rgba(0,0,0,0.6); padding: 6px 10px; border-radius: 6px; }
 .stat-details span { color: #fff; font-weight: bold; }
+#debug-panel { text-shadow: 0 0 4px rgba(0,0,0,0.8); }
+.settings-btn { background: #4a4a6a !important; border-color: #88a !important; }
+.settings-btn:hover { background: #5a5a8a !important; }

@@ -46,12 +46,26 @@
 </div>
 
 <div id="death-screen"><div id="death-panel"><h1>☠️ ВЫ ПОГИБЛИ</h1><p>R — возрождение</p><button id="btn-respawn">🔄 Возродиться</button></div></div>
-<div id="pause-menu"><div id="pause-panel"><h2>⏸️ ПАУЗА</h2><button class="continue-btn" id="btn-continue">▶ Продолжить</button><button class="new-btn" id="btn-new-world">🔄 Новый мир</button><p>ESC — закрыть</p></div></div>
+<div id="pause-menu">
+  <div id="pause-panel">
+    <h2>⏸️ ПАУЗА</h2>
+    <button class="continue-btn" id="btn-continue">▶ Продолжить</button>
+    <button class="new-btn" id="btn-new-world">🔄 Новый мир</button>
+    <button class="settings-btn" id="btn-settings">⚙️ Настройки</button>
+    <p>ESC — закрыть</p>
+  </div>
+</div>
 <div id="craft-panel"><div id="craft-panel-inner"><h2>🔧 КРАФТ</h2><div id="craft-list"></div><p>C или ESC — закрыть</p></div></div>
-
+<div id="settings-panel" style="position:fixed;top:0;left:0;width:100%;height:100%;display:none;justify-content:center;align-items:center;z-index:110;pointer-events:auto;background:rgba(0,0,0,0.7);">
+  <div style="background:#1a1a2e;border:2px solid #888;border-radius:16px;padding:25px 30px;text-align:center;color:#fff;box-shadow:0 0 40px rgba(0,0,0,0.8);min-width:350px;">
+    <h2 style="color:#ffcc00;margin:0 0 20px 0;">⚙️ Настройки</h2>
+    <div id="settings-list" style="text-align:left;line-height:2;"></div>
+    <button id="btn-settings-close" style="margin-top:15px;padding:10px 20px;font-size:14px;font-family:monospace;background:#4a4a4a;color:#fff;border:2px solid #888;border-radius:8px;cursor:pointer;">Закрыть</button>
+  </div>
+</div>
 <canvas id="game"></canvas>
-
+<div id="debug-panel" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:200;font-family:monospace;font-size:12px;color:#fff;background:rgba(0,0,0,0.5);display:none;padding:10px;line-height:1.6;white-space:pre-line;"></div>
 <script src="game.js"></script>
-<footer>v0.0.2.6.0</footer>
+<footer>v0.0.2.7.0</footer>
 </body>
 </html>

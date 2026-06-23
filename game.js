@@ -2,6 +2,24 @@
 // game.js — v2.1: Дроп на землю + Drag&Drop сундук
 // ══════════════════════════════════════════════
 
+// Настройки
+let settings = {
+  renderDistance: 16,    // 8, 12, 16, 24
+  aiSkipFar: true,       // пропускать кадры для дальних мобов
+  aiSkipDistance: 10,    // дальше этого — реже обновлять
+  showGrassDetails: true, // детали на траве
+  showParticles: true,   // снежинки, рябь
+  smoothBiomes: true,  // плавные переходы биомов
+  showTextures: true,  // показывать текстуры
+  qualityMode: 'auto',  // 'auto', 'presets', 'manual'           // авто-подстройка качества
+  qualityPreset: 'medium'      // 'low', 'medium', 'high'
+};
+
+// Кэш для объектов
+let cachedObjects = null;
+let cacheFrame = 0;
+let frameSkipCounter = 0;
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
@@ -21,6 +39,9 @@ let SEED = Math.floor(Math.random() * 1000000);
 // Камера и зум
 let camX = 0, camY = 0;
 let zoom = 3.0;
+let fps = 0;
+let frameCount = 0;
+let fpsTimer = 0;
 
 let mouseX = 0, mouseY = 0;
 canvas.addEventListener('mousemove', function(e) {
@@ -69,20 +90,20 @@ const MONSTER_TYPES = {
   fallen:   { name:'Падший', texKey:'monster_fallen', hp:20, damage:7, moveDelay:300, chaseRange:6, attackRange:1, attackCD:400, spawnTime:'night', biomes:['grass','sand'], maxPerChunk:2, color:'#cc4444', xpReward:15, drops:[{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.5},{name:'Кожа',emoji:'🧥',texKey:'item_leather',chance:0.4}], spawnChance: 0.010 },
   demon:    { name:'Демон', texKey:'monster_demon', hp:50, damage:20, moveDelay:450, chaseRange:7, attackRange:2, attackCD:700, spawnTime:'night', biomes:['stone'], maxPerChunk:1, color:'#ff4400', burnsInDay:true, xpReward:50, drops:[{name:'Сердце демона',emoji:'❤️‍🔥',texKey:'item_demon_heart',chance:0.4},{name:'Пепел',emoji:'🪶',texKey:'item_ash',chance:0.7}], spawnChance: 0.005 },
   ghoul:    { name:'Упырь', texKey:'monster_ghoul', hp:30, damage:12, moveDelay:250, chaseRange:8, attackRange:1, attackCD:350, spawnTime:'night', biomes:['forest','grass'], maxPerChunk:2, color:'#9966cc', burnsInDay:true, xpReward:30, drops:[{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.5},{name:'Зелье',emoji:'🧪',texKey:'item_potion',chance:0.2}], spawnChance: 0.010 },
-  shadow:   { name:'Тень', texKey:'monster_shadow', hp:15, damage:8, moveDelay:500, chaseRange:6, attackRange:2, attackCD:500, spawnTime:'night', biomes:['stone','forest'], maxPerChunk:1, color:'#222244', burnsInDay:true, xpReward:35, drops:[{name:'Тёмная пыль',emoji:'✨',texKey:'item_dark_dust',chance:0.6},{name:'Душа',emoji:'👻',texKey:'item_soul',chance:0.3}], spawnChance: 0.006 },
-  imp:      { name:'Бес', texKey:'monster_imp', hp:18, damage:6, moveDelay:350, chaseRange:5, attackRange:3, attackCD:500, spawnTime:'any', biomes:['stone','sand'], maxPerChunk:1, color:'#ff8800', xpReward:18, drops:[{name:'Рог беса',emoji:'👿',texKey:'item_imp_horn',chance:0.5},{name:'Сера',emoji:'💛',texKey:'item_sulfur',chance:0.4}], spawnChance: 0.004 },
-  wolf:     { name:'Волк', texKey:'monster_wolf', hp:22, damage:9, moveDelay:350, chaseRange:5, attackRange:1, attackCD:450, spawnTime:'day', biomes:['forest','grass','snow'], maxPerChunk:1, color:'#888', neutral:true, xpReward:12, drops:[{name:'Волчья шкура',emoji:'🐺',texKey:'item_wolf_pelt',chance:0.5},{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.6}], spawnChance: 0.007 },
-  boar:     { name:'Кабан', texKey:'monster_boar', hp:30, damage:11, moveDelay:400, chaseRange:4, attackRange:1, attackCD:500, spawnTime:'day', biomes:['grass','forest'], maxPerChunk:1, color:'#6b4c2b', neutral:true, xpReward:15, drops:[{name:'Кабанья шкура',emoji:'🐗',texKey:'item_boar_pelt',chance:0.5},{name:'Мясо',emoji:'🥩',texKey:'item_meat',chance:0.7}], spawnChance: 0.005 },
-  spider:   { name:'🕷️ Паук', texKey:'monster_spider', hp:15, damage:8, moveDelay:350, chaseRange:5, attackRange:1, attackCD:600, spawnTime:'any', biomes:['forest','grass'], maxPerChunk:1, color:'#444444', xpReward:12, drops:[{name:'🕸️ Паутина',emoji:'🕸️',texKey:'item_web',chance:0.7},{name:'🦷 Ядовитый клык',emoji:'🦷',texKey:'item_venom_fang',chance:0.3}], spawnChance: 0.003 },
-  snake:    { name:'Змея', texKey:'monster_snake', hp:15, damage:6, moveDelay:350, chaseRange:5, attackRange:2, attackCD:800, spawnTime:'any', biomes:['sand'], maxPerChunk:1, color:'#137400', xpReward:12, drops:[{name:'Кожа',emoji:'🧥',texKey:'item_leather',chance:0.5},{name:'🦷 Ядовитый клык',emoji:'🦷',texKey:'item_venom_fang',chance:0.4}], spawnChance: 0.005 }
+  shadow:   { name:'Тень', texKey:'monster_shadow', hp:15, damage:8, moveDelay:500, chaseRange:6, attackRange:2, attackCD:500, spawnTime:'any', biomes:['stone', 'sand'], maxPerChunk:1, color:'#222244', burnsInDay:true, xpReward:35, drops:[{name:'Тёмная пыль',emoji:'✨',texKey:'item_dark_dust',chance:0.6},{name:'Душа',emoji:'👻',texKey:'item_soul',chance:0.3}], spawnChance: 0.006 },
+  imp:      { name:'Бес', texKey:'monster_imp', hp:18, damage:6, moveDelay:350, chaseRange:5, attackRange:3, attackCD:500, spawnTime:'night', biomes:['stone', 'sand'], maxPerChunk:1, color:'#ff8800', xpReward:18, drops:[{name:'Рог беса',emoji:'👿',texKey:'item_imp_horn',chance:0.5},{name:'Сера',emoji:'💛',texKey:'item_sulfur',chance:0.4}], spawnChance: 0.004 },
+  wolf:     { name:'Волк', texKey:'monster_wolf', hp:22, damage:9, moveDelay:350, chaseRange:5, attackRange:1, attackCD:450, spawnTime:'any', biomes:['forest', 'mixed_forest', 'taiga', 'snow'], maxPerChunk:1, color:'#888', neutral:true, xpReward:12, drops:[{name:'Волчья шкура',emoji:'🐺',texKey:'item_wolf_pelt',chance:0.5},{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.6}], spawnChance: 0.007 },
+  boar:     { name:'Кабан', texKey:'monster_boar', hp:30, damage:11, moveDelay:400, chaseRange:4, attackRange:1, attackCD:500, spawnTime:'any', biomes:['mixed_forest', 'taiga', 'snow'], maxPerChunk:1, color:'#6b4c2b', neutral:true, xpReward:15, drops:[{name:'Кабанья шкура',emoji:'🐗',texKey:'item_boar_pelt',chance:0.5},{name:'Мясо',emoji:'🥩',texKey:'item_meat',chance:0.7}], spawnChance: 0.005 },
+  spider:   { name:'🕷️ Паук', texKey:'monster_spider', hp:15, damage:8, moveDelay:350, chaseRange:5, attackRange:1, attackCD:600, spawnTime:'any', biomes:['forest', 'mixed_forest', 'taiga'], maxPerChunk:1, color:'#444444', xpReward:12, drops:[{name:'🕸️ Паутина',emoji:'🕸️',texKey:'item_web',chance:0.7},{name:'🦷 Ядовитый клык',emoji:'🦷',texKey:'item_venom_fang',chance:0.3}], spawnChance: 0.003 },
+  snake:    { name:'Змея', texKey:'monster_snake', hp:15, damage:6, moveDelay:350, chaseRange:5, attackRange:2, attackCD:800, spawnTime:'any', biomes:['sand', 'grass'], maxPerChunk:1, color:'#137400', xpReward:12, drops:[{name:'Кожа',emoji:'🧥',texKey:'item_leather',chance:0.5},{name:'🦷 Ядовитый клык',emoji:'🦷',texKey:'item_venom_fang',chance:0.4}], spawnChance: 0.005 }
 };
 
 // Мирные
 const PEACEFUL_TYPES = {
-  cow:    { name:'Корова', texKey:'animal_cow', hp:15, color:'#f5f5dc', dropName:'🥩 Мясо', dropEmoji:'🥩', dropTexKey:'item_meat', dropHeal:20, xpReward:5, biomes:['grass'], maxPerChunk:1, spawnChance: 0.003 },
-  deer:   { name:'Олень', texKey:'animal_deer', hp:12, color:'#c4a46c', dropName:'🍖 Оленина', dropEmoji:'🍖', dropTexKey:'item_venison', dropHeal:15, xpReward:8, biomes:['forest', 'snow'], maxPerChunk:1, spawnChance: 0.003 },
-  rabbit: { name:'Кролик', texKey:'animal_rabbit', hp:5, color:'#ccc', dropName:'🍗 Крольчатина', dropEmoji:'🍗', dropTexKey:'item_rabbit_meat', dropHeal:8, xpReward:3, biomes:['grass','forest'], maxPerChunk:2, spawnChance: 0.006 },
-  chicken:{ name:'Курица', texKey:'animal_chicken', hp:3, color:'#fff', dropName:'🍳 Яйцо', dropEmoji:'🍳', dropTexKey:'item_egg', dropHeal:5, xpReward:2, biomes:['grass'], maxPerChunk:1, spawnChance: 0.008 }
+  cow:      { name:'Корова', texKey:'animal_cow', hp:15, color:'#f5f5dc', dropName:'🥩 Мясо', dropEmoji:'🥩', dropTexKey:'item_meat', dropHeal:20, xpReward:5, biomes:['grass'], maxPerChunk:1, spawnChance: 0.003 },
+  deer:     { name:'Олень', texKey:'animal_deer', hp:12, color:'#c4a46c', dropName:'🍖 Оленина', dropEmoji:'🍖', dropTexKey:'item_venison', dropHeal:15, xpReward:8, biomes:['mixed_forest', 'snow', 'taiga'], maxPerChunk:1, spawnChance: 0.003 },
+  rabbit:   { name:'Кролик', texKey:'animal_rabbit', hp:5, color:'#ccc', dropName:'🍗 Крольчатина', dropEmoji:'🍗', dropTexKey:'item_rabbit_meat', dropHeal:8, xpReward:3, biomes:['forest', 'snow', 'taiga'], maxPerChunk:2, spawnChance: 0.006 },
+  chicken:  { name:'Курица', texKey:'animal_chicken', hp:3, color:'#fff', dropName:'🍳 Яйцо', dropEmoji:'🍳', dropTexKey:'item_egg', dropHeal:5, xpReward:2, biomes:['grass', 'forest'], maxPerChunk:1, spawnChance: 0.008 }
 };
 
 // Ресурсы
@@ -213,6 +234,9 @@ const TEXTURE_PATHS = {
   item_cooked_rabbit:'img/item_cooked_rabbit.png',
   item_snowball:'img/item_snowball.png',
   item_ice:'img/item_ice.png',
+  item_wheat:'img/item_wheat.png',
+  item_seeds:'img/item_seeds.png',
+  item_fiber:'img/item_fiber.png'
 };
 
 let openCampfire = null; // открытый костёр
@@ -451,11 +475,13 @@ function hash(x, y) {
   h = (h ^ (h >> 13)) * 1274126177; h = h ^ (h >> 16);
   return (h & 0x7fffffff) / 0x7fffffff;
 }
+
 function smoothNoise(x, y) {
   let ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
   fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
   return hash(ix,iy)*(1-fx)*(1-fy)+hash(ix+1,iy)*fx*(1-fy)+hash(ix,iy+1)*(1-fx)*fy+hash(ix+1,iy+1)*fx*fy;
 }
+
 function getTile(tx, ty) {
   let temperature = smoothNoise(tx * 0.04 + 100, ty * 0.04 + 100);
   let humidity = smoothNoise(tx * 0.04 + 300, ty * 0.04 + 300);
@@ -464,14 +490,17 @@ function getTile(tx, ty) {
   // Вода
   if (waterNoise > 0.62) return { base: 1, biome: 'water', blend: null };
   
-  // Снег — с переходом к траве/лесу
+  // Снег — очень холодно
+  if (temperature < 0.25) return { base: 5, biome: 'snow', blend: null };
+  
+  // Переход снег → тайга
   if (temperature < 0.35) {
-    if (temperature < 0.28) return { base: 5, biome: 'snow', blend: null };
-    // Переходная зона снег → трава/лес
-    let blendAmount = (0.35 - temperature) / 0.07; // 1 = снег, 0 = трава
-    let otherBase = humidity > 0.55 ? 0 : 0; // forest или grass
-    return { base: 5, biome: 'snow', blend: { base: otherBase, amount: 1 - blendAmount } };
+    let blendAmount = (0.35 - temperature) / 0.10;
+    return { base: 7, biome: 'taiga', blend: { base: 5, amount: blendAmount } };
   }
+  
+  // Тайга — холодно, но не снег
+  if (temperature < 0.38) return { base: 7, biome: 'taiga', blend: null };
   
   // Пустыня — с переходом к траве
   if (temperature > 0.60 && humidity < 0.50) {
@@ -487,15 +516,20 @@ function getTile(tx, ty) {
     return { base: 0, biome: 'grass', blend: { base: 3, amount: blendAmount } };
   }
   
-  // Лес — с переходом к траве
-  if (humidity > 0.50) {
-    if (humidity > 0.60) return { base: 0, biome: 'forest', blend: null };
-    let blendAmount = (0.60 - humidity) / 0.10;
-    return { base: 0, biome: 'forest', blend: { base: 0, amount: blendAmount } };
+  // Смешанный лес
+  if (humidity > 0.45 && humidity < 0.65) return { base: 6, biome: 'mixed_forest', blend: null };
+  
+  // Лес — с переходом к смешанному
+  if (humidity >= 0.65) {
+    if (humidity > 0.72) return { base: 0, biome: 'forest', blend: null };
+    let blendAmount = (0.72 - humidity) / 0.07;
+    return { base: 0, biome: 'forest', blend: { base: 6, amount: blendAmount } };
   }
   
+  // Равнина
   return { base: 0, biome: 'grass', blend: null };
 }
+
 function tileToScreen(rx, ry) {
   let W = canvas.width, H = canvas.height;
   return { x:((rx-ry)*TILE_HW)*zoom+W/2+camX, y:((rx+ry)*TILE_HH)*zoom+H/2+camY };
@@ -787,13 +821,13 @@ function countPeacefulInChunk(chunk, key) {
 }
 
 function getVisibleEntities() {
-  
-  let all = [], range = 22;
+  let all = [], range = settings.renderDistance;
   let minTX = player.tx - range, maxTX = player.tx + range, minTY = player.ty - range, maxTY = player.ty + range;
   let minCX = Math.floor(minTX/CHUNK_SIZE), maxCX = Math.floor(maxTX/CHUNK_SIZE);
   let minCY = Math.floor(minTY/CHUNK_SIZE), maxCY = Math.floor(maxTY/CHUNK_SIZE);
   for (let cx = minCX; cx <= maxCX; cx++) for (let cy = minCY; cy <= maxCY; cy++) {
-    ensureChunk(cx, cy); let chunk = chunks[cx+','+cy]; if (!chunk) continue;
+    let chunk = chunks[cx+','+cy]; // НЕ вызываем ensureChunk!
+    if (!chunk) continue;
     for (let i = 0; i < chunk.entities.length; i++) {
       let e = chunk.entities[i];
       if (e.tx >= minTX && e.tx <= maxTX && e.ty >= minTY && e.ty <= maxTY) all.push(e);
@@ -808,20 +842,70 @@ function getEntitiesAt(tx, ty, chunk) {
   
   let h = hash(tx*1000+123, ty*1000+456), h2 = hash(tx*777+999, ty*777+888), tod = getTimeOfDay();
   
-  if (tile.biome==='grass' && h<0.18) { let rt=RESOURCE_TYPES['tree']; entities.push(createEntity({type:'resource',resourceKey:'tree',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops})); }
-  if (tile.biome==='forest' && h<0.38) { let rt=RESOURCE_TYPES['pine']; entities.push(createEntity({type:'resource',resourceKey:'pine',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops})); }
-  if (tile.biome==='stone' && h<0.14) { let rt=RESOURCE_TYPES['stone']; entities.push(createEntity({type:'resource',resourceKey:'stone',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops})); }
-  if (tile.biome==='stone' && h>=0.14 && h<0.24) { let rt=RESOURCE_TYPES['ore']; entities.push(createEntity({type:'resource',resourceKey:'ore',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops})); }
-  if (tile.biome==='sand' && h<0.10) { let rt=RESOURCE_TYPES['cactus']; entities.push(createEntity({type:'resource',resourceKey:'cactus',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops})); }
-  // Снежный биом — ресурсы
-if (tile.biome === 'snow') {
-  if (h < 0.20) {
-    let rt = RESOURCE_TYPES['snow_tree'];
-    entities.push(createEntity({ type:'resource', resourceKey:'snow_tree', tx, ty, texKey:rt.texKey, name:rt.name, hp:rt.hp, maxHp:rt.hp, h:rt.h, color:rt.color, drops:rt.drops }));
+// РАВНИНА — редкие деревья + кусты + пшеница
+if (tile.biome === 'grass') {
+  if (h < 0.06) {
+    let rt = RESOURCE_TYPES['tree'];
+    entities.push(createEntity({type:'resource',resourceKey:'tree',tx,ty,texKey:rt.texKey,name:'Дерево',hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
   }
-  if (h >= 0.20 && h < 0.30) {
+  if (h >= 0.06 && h < 0.10) {
+    entities.push(createEntity({type:'resource',resourceKey:'bush',tx,ty,texKey:null,name:'🌿 Куст',hp:10,maxHp:10,h:6,color:'#5a8a3a',drops:[{name:'Палка',emoji:'🥢',texKey:'item_stick',chance:1.0,count:1},{name:'Волокно',emoji:'🧵',texKey:'item_fiber',chance:0.5,count:1}]}));
+  }
+  if (h >= 0.10 && h < 0.14) {
+    entities.push(createEntity({type:'resource',resourceKey:'wheat',tx,ty,texKey:null,name:'🌾 Пшеница',hp:5,maxHp:5,h:8,color:'#d4c47c',drops:[{name:'Пшеница',emoji:'🌾',texKey:'item_wheat',chance:1.0,count:1},{name:'Семена',emoji:'🌱',texKey:'item_seeds',chance:0.5,count:1}]}));
+  }
+}
+
+// ЛЕС — много деревьев
+if (tile.biome === 'forest' && h < 0.40) {
+  let rt = RESOURCE_TYPES['tree'];
+  entities.push(createEntity({type:'resource',resourceKey:'tree',tx,ty,texKey:rt.texKey,name:'Дерево',hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
+}
+
+// СМЕШАННЫЙ ЛЕС — деревья + сосны
+if (tile.biome === 'mixed_forest' && h < 0.35) {
+  if (h < 0.18) {
+    let rt = RESOURCE_TYPES['tree'];
+    entities.push(createEntity({type:'resource',resourceKey:'tree',tx,ty,texKey:rt.texKey,name:'Дерево',hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
+  } else {
+    let rt = RESOURCE_TYPES['pine'];
+    entities.push(createEntity({type:'resource',resourceKey:'pine',tx,ty,texKey:rt.texKey,name:'Сосна',hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
+  }
+}
+
+// ТАЙГА — сосны
+if (tile.biome === 'taiga' && h < 0.35) {
+  let rt = RESOURCE_TYPES['pine'];
+  entities.push(createEntity({type:'resource',resourceKey:'pine',tx,ty,texKey:rt.texKey,name:'Сосна',hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
+}
+
+// СНЕГ — заснеженные сосны + ледяные камни
+if (tile.biome === 'snow') {
+  if (h < 0.22) {
+    let rt = RESOURCE_TYPES['snow_tree'];
+    entities.push(createEntity({type:'resource',resourceKey:'snow_tree',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
+  }
+  if (h >= 0.22 && h < 0.30) {
     let rt = RESOURCE_TYPES['ice_rock'];
-    entities.push(createEntity({ type:'resource', resourceKey:'ice_rock', tx, ty, texKey:rt.texKey, name:rt.name, hp:rt.hp, maxHp:rt.hp, h:rt.h, color:rt.color, drops:rt.drops }));
+    entities.push(createEntity({type:'resource',resourceKey:'ice_rock',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
+  }
+}
+
+// ПУСТЫНЯ — кактусы
+if (tile.biome === 'sand' && h < 0.10) {
+  let rt = RESOURCE_TYPES['cactus'];
+  entities.push(createEntity({type:'resource',resourceKey:'cactus',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
+}
+
+// КАМЕНЬ — камни и руда
+if (tile.biome === 'stone') {
+  if (h < 0.14) {
+    let rt = RESOURCE_TYPES['stone'];
+    entities.push(createEntity({type:'resource',resourceKey:'stone',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
+  }
+  if (h >= 0.14 && h < 0.24) {
+    let rt = RESOURCE_TYPES['ore'];
+    entities.push(createEntity({type:'resource',resourceKey:'ore',tx,ty,texKey:rt.texKey,name:rt.name,hp:rt.hp,maxHp:rt.hp,h:rt.h,color:rt.color,drops:rt.drops}));
   }
 }
 
@@ -940,10 +1024,23 @@ function cleanupDead(){
 }
 
 function collectVisibleObjects(){
-  let allTiles=[],allEntities=[],range=22,minTX=player.tx-range,maxTX=player.tx+range,minTY=player.ty-range,maxTY=player.ty+range;
+  // Кэширование — обновляем только при движении или раз в 3 кадра
+  if (cachedObjects && !player.moving && frameCount - cacheFrame < 3) {
+    return cachedObjects;
+  }
+  
+  let allTiles=[],allEntities=[];
+  let range = settings.renderDistance;
+  let minTX=player.tx-range,maxTX=player.tx+range,minTY=player.ty-range,maxTY=player.ty+range;
   let minCX=Math.floor(minTX/CHUNK_SIZE),maxCX=Math.floor(maxTX/CHUNK_SIZE),minCY=Math.floor(minTY/CHUNK_SIZE),maxCY=Math.floor(maxTY/CHUNK_SIZE);
-  for(let cx=minCX;cx<=maxCX;cx++)for(let cy=minCY;cy<=maxCY;cy++){ensureChunk(cx,cy);let chunk=chunks[cx+','+cy];if(!chunk)continue;for(let i=0;i<chunk.tiles.length;i++){let t=chunk.tiles[i];if(t.tx>=minTX&&t.tx<=maxTX&&t.ty>=minTY&&t.ty<=maxTY)allTiles.push(t);}for(let i=0;i<chunk.entities.length;i++){let e=chunk.entities[i];if(e.tx>=minTX&&e.tx<=maxTX&&e.ty>=minTY&&e.ty<=maxTY)allEntities.push(e);}}
-  return {tiles:allTiles,entities:allEntities};
+  for(let cx=minCX;cx<=maxCX;cx++)for(let cy=minCY;cy<=maxCY;cy++){
+    ensureChunk(cx,cy);let chunk=chunks[cx+','+cy];if(!chunk)continue;
+    for(let i=0;i<chunk.tiles.length;i++){let t=chunk.tiles[i];if(t.tx>=minTX&&t.tx<=maxTX&&t.ty>=minTY&&t.ty<=maxTY)allTiles.push(t);}
+    for(let i=0;i<chunk.entities.length;i++){let e=chunk.entities[i];if(e.tx>=minTX&&e.tx<=maxTX&&e.ty>=minTY&&e.ty<=maxTY)allEntities.push(e);}
+  }
+  cachedObjects = {tiles:allTiles,entities:allEntities};
+  cacheFrame = frameCount;
+  return cachedObjects;
 }
 
 // AI и бой
@@ -1367,7 +1464,7 @@ slot.onclick = function() {
 function lighten(hex, f) { let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); r=Math.min(255,Math.floor(r*f)); g=Math.min(255,Math.floor(g*f)); b=Math.min(255,Math.floor(b*f)); return'rgb('+r+','+g+','+b+')'; }
 
 function drawTileCode(tx,ty,base){
-    let pos=tileToScreen(tx,ty),colors=['#4a7a3a','#2a5a8a','#c4b47c','#6a6a6a','','#e8e8f0'],hw=TILE_HW*zoom,hh=TILE_HH*zoom;
+    let pos=tileToScreen(tx,ty),colors=['#4a7a3a','#2a5a8a','#c4b47c','#6a6a6a','','#e8e8f0','#3a6a2a','#4a7050'],hw=TILE_HW*zoom,hh=TILE_HH*zoom;
     ctx.save();
     ctx.fillStyle=colors[base]||'#000';
     ctx.strokeStyle='#1a1a1a';
@@ -1380,17 +1477,17 @@ function drawTileCode(tx,ty,base){
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    if(base===0&&hash(tx,ty)<0.3){
+    if(base===0 && settings.showGrassDetails && hash(tx,ty)<0.3){
         ctx.fillStyle='rgba(100,180,80,0.35)';
         ctx.fillRect(pos.x-2*zoom+(hash(tx+99,ty+99)-0.5)*hw,pos.y-1*zoom+(hash(tx+88,ty+88)-0.5)*hh,2*zoom,2*zoom);
     }
-    if(base===1){
+    if(base===1 && settings.showParticles){
         ctx.fillStyle='rgba(255,255,255,0.2)';
         ctx.beginPath();
         ctx.arc(pos.x+Math.sin(Date.now()/800+tx*0.7+ty*0.3)*hw*0.3,pos.y+Math.cos(Date.now()/800+tx*0.5+ty*0.6)*hh*0.3,4*zoom,0,Math.PI*2);
         ctx.fill();
     }
-if(base===5){
+if(base===5 && settings.showParticles){
   ctx.fillStyle='rgba(255,255,255,0.3)';
   for(let s=0;s<3;s++){
     ctx.fillRect(pos.x-2*zoom+(hash(tx+s*10,ty+s*10)-0.5)*hw, pos.y-1*zoom+(hash(tx+s*20,ty+s*20)-0.5)*hh, 1.5*zoom, 1.5*zoom);
@@ -1398,18 +1495,74 @@ if(base===5){
 }
     ctx.restore();
 }
+
 function drawTileTex(tx, ty, tileData) {
   let base = tileData.base;
   let blend = tileData.blend;
   let pos = tileToScreen(tx, ty);
-  let keys = ['tile_grass', 'tile_water', 'tile_sand', 'tile_stone', '', 'tile_snow'];
+  let keys = ['tile_grass', 'tile_water', 'tile_sand', 'tile_stone', '', 'tile_snow', 'tile_grass', 'tile_grass'];
   let img = getTex(keys[base]);
   let hw = TILE_HW * zoom;
   let hh = TILE_HH * zoom;
 
+  // Если нет текстур — рисуем цветами с возможным смешиванием
+  if (!settings.showTextures || !img) {
+    let colors = ['#4a7a3a','#2a5a8a','#c4b47c','#6a6a6a','','#e8e8f0','#3a6a2a','#4a7050'];
+    let color = colors[base] || '#000';
+    
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y - hh);
+    ctx.lineTo(pos.x + hw, pos.y);
+    ctx.lineTo(pos.x, pos.y + hh);
+    ctx.lineTo(pos.x - hw, pos.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    // Смешивание цветов если включено
+    if (settings.smoothBiomes && blend && blend.amount > 0) {
+      let blendColor = colors[blend.base] || '#000';
+      ctx.globalAlpha = blend.amount;
+      ctx.fillStyle = blendColor;
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y - hh);
+      ctx.lineTo(pos.x + hw, pos.y);
+      ctx.lineTo(pos.x, pos.y + hh);
+      ctx.lineTo(pos.x - hw, pos.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    
+    // Детали травы и частицы
+    if (settings.showGrassDetails && base === 0 && hash(tx, ty) < 0.3) {
+      ctx.fillStyle = 'rgba(100,180,80,0.35)';
+      ctx.fillRect(pos.x - 2*zoom + (hash(tx+99,ty+99)-0.5)*hw, pos.y - 1*zoom + (hash(tx+88,ty+88)-0.5)*hh, 2*zoom, 2*zoom);
+    }
+    if (settings.showParticles && base === 1) {
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.beginPath();
+      ctx.arc(pos.x + Math.sin(Date.now()/800 + tx*0.7 + ty*0.3)*hw*0.3, pos.y + Math.cos(Date.now()/800 + tx*0.5 + ty*0.6)*hh*0.3, 4*zoom, 0, Math.PI*2);
+      ctx.fill();
+    }
+    if (settings.showParticles && base === 5) {
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      for(let s=0; s<3; s++) {
+        ctx.fillRect(pos.x - 2*zoom + (hash(tx+s*10,ty+s*10)-0.5)*hw, pos.y - 1*zoom + (hash(tx+s*20,ty+s*20)-0.5)*hh, 1.5*zoom, 1.5*zoom);
+      }
+    }
+    
+    ctx.restore();
+    return;
+  }
+
+  // Текстуры включены — рисуем текстурами
   ctx.save();
   
-  // Clipping region (ромб)
   ctx.beginPath();
   ctx.moveTo(pos.x, pos.y - hh);
   ctx.lineTo(pos.x + hw, pos.y);
@@ -1418,25 +1571,15 @@ function drawTileTex(tx, ty, tileData) {
   ctx.closePath();
   ctx.clip();
   
-  if (img) {
-    ctx.drawImage(img, pos.x - hw, pos.y - hh, TILE_W * zoom, TILE_H * zoom);
-  }
+  ctx.drawImage(img, pos.x - hw, pos.y - hh, TILE_W * zoom, TILE_H * zoom);
   
-  // Смешивание с соседним биомом
-  if (blend && blend.amount > 0) {
+  if (settings.smoothBiomes && blend && blend.amount > 0) {
     let blendImg = getTex(keys[blend.base]);
     if (blendImg) {
       ctx.globalAlpha = blend.amount;
       ctx.drawImage(blendImg, pos.x - hw, pos.y - hh, TILE_W * zoom, TILE_H * zoom);
       ctx.globalAlpha = 1;
     }
-  }
-  
-  // Если нет основной текстуры — рисуем кодом
-  if (!img) {
-    ctx.restore();
-    drawTileCode(tx, ty, base);
-    return;
   }
   
   ctx.restore();
@@ -1476,7 +1619,7 @@ function drawEntityTex(e){
   if(!img&&(e.type==='monster'||e.type==='peaceful'))img=getTex('monster_default');
   
   // Если нет текстуры — рисуем кодом
-  if(!img){drawEntityCode(e);return;}
+  if(!img || !settings.showTextures){drawEntityCode(e);return;}
   
   let pos=tileToScreen(e.rx,e.ry),h=(e.h||12)*zoom;
   ctx.save();
@@ -1581,7 +1724,7 @@ if (player.attackCooldown > 0) {
     ctx.restore();}
 function drawPlayerTex(){
     let img=getTex('player');
-    if(!img){
+    if(!img || !settings.showTextures){
         drawPlayerCode();
         return;
     }
@@ -1659,7 +1802,8 @@ function render(){
   
   let grad=ctx.createRadialGradient(W/2,H/2,W*0.3,W/2,H/2,W*0.75);grad.addColorStop(0,'rgba(0,0,0,0)');grad.addColorStop(1,'rgba(0,0,0,0.25)');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   let tod=getTimeOfDay();document.getElementById('time-indicator').textContent=(tod==='day'?'☀️':'🌙')+' '+(tod==='day'?'День':'Ночь')+' '+Math.floor(getDayProgress()*100)+'%';
-  document.getElementById('coords').textContent='Ур.'+player.level+' | ('+Math.round(player.rx)+', '+Math.round(player.ry)+') | Чанков: '+Object.keys(chunks).length;
+  document.getElementById('coords').textContent='XY: '+Math.round(player.rx)+', '+Math.round(player.ry);
+  updateDebugPanel();
   updatePlayerStats();
   updateInventoryUI();
 }
@@ -1699,11 +1843,23 @@ if(e.key.toLowerCase()==='h'){
 }
   if(e.key>='1'&&e.key<='8'){selectedSlot=parseInt(e.key)-1;updateInventoryUI();e.preventDefault();return;}
   keys[e.key.toLowerCase()]=true;keys[e.key]=true;
+  if(e.key==='F3'){
+  e.preventDefault();
+  let panel = document.getElementById('debug-panel');
+  if(panel.style.display === 'none' || panel.style.display === ''){
+    panel.style.display = 'block';
+  } else {
+    panel.style.display = 'none';
+  }
+  return;
+}
   if(e.key.toLowerCase()==='r'&&player.hp<=0){player.hp=player.maxHp;player.attackCooldown=0;document.getElementById('death-screen').classList.remove('active');addLog('🔄 Возрождение!');}
   e.preventDefault();
 });
 window.addEventListener('keyup',function(e){keys[e.key.toLowerCase()]=false;keys[e.key]=false;e.preventDefault();});
-canvas.addEventListener('wheel',function(e){if(paused||openChest)return;if(e.shiftKey||e.ctrlKey){e.preventDefault();zoom=Math.max(0.4,Math.min(3.0,zoom-e.deltaY*0.001));}else{e.preventDefault();if(e.deltaY>0)selectedSlot=(selectedSlot+1)%8;else selectedSlot=(selectedSlot-1+8)%8;updateInventoryUI();}});
+canvas.addEventListener('wheel',function(e){if(paused||openChest)return;if(e.shiftKey||e.ctrlKey){e.preventDefault();
+  zoom=Math.max(1.0,Math.min(3.0,zoom-e.deltaY*0.001));
+}else{e.preventDefault();if(e.deltaY>0)selectedSlot=(selectedSlot+1)%8;else selectedSlot=(selectedSlot-1+8)%8;updateInventoryUI();}});
 canvas.addEventListener('click',function(e){
   if(paused||player.hp<=0)return;
   
@@ -1833,8 +1989,29 @@ canvas.addEventListener('contextmenu', function(e) {
 
 function handleInput(now){
   if(paused||player.hp<=0||openChest)return;
-  if(Math.abs(player.rx-player.tx)>0.01||Math.abs(player.ry-player.ty)>0.01){let dt=(now-player.lastMoveTime)/1000;if(dt>0.1)dt=0.1;let speed=MOVE_SPEED*dt,ddx=player.tx-player.rx,ddy=player.ty-player.ry,dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist<=speed){player.rx=player.tx;player.ry=player.ty;player.moving=false;}else{player.rx+=(ddx/dist)*speed;player.ry+=(ddy/dist)*speed;player.moving=true;}player.lastMoveTime=now;let pos=tileToScreen(player.rx,player.ry);camX+=(canvas.width/2-pos.x)*0.3;camY+=(canvas.height/2-pos.y)*0.3;return;}
-  player.moving=false;let nx=player.tx,ny=player.ty;if(keys['w']||keys['ц']||keys['arrowup'])ny--;if(keys['s']||keys['ы']||keys['arrowdown'])ny++;if(keys['a']||keys['ф']||keys['arrowleft'])nx--;if(keys['d']||keys['в']||keys['arrowright'])nx++;if(nx!==player.tx||ny!==player.ty){if(getTile(nx,ny).base===1)return;player.tx=nx;player.ty=ny;player.lastMoveTime=now;}
+  if(Math.abs(player.rx-player.tx)>0.01||Math.abs(player.ry-player.ty)>0.01){
+    let dt=(now-player.lastMoveTime)/1000;if(dt>0.1)dt=0.1;
+    let speed=MOVE_SPEED*dt,ddx=player.tx-player.rx,ddy=player.ty-player.ry,dist=Math.sqrt(ddx*ddx+ddy*ddy);
+    if(dist<=speed){player.rx=player.tx;player.ry=player.ty;player.moving=false;}
+    else{player.rx+=(ddx/dist)*speed;player.ry+=(ddy/dist)*speed;player.moving=true;}
+    player.lastMoveTime=now;
+    let pos=tileToScreen(player.rx,player.ry);
+    camX+=(canvas.width/2-pos.x)*0.3;camY+=(canvas.height/2-pos.y)*0.3;
+    return;
+  }
+  player.moving=false;
+  let nx=player.tx,ny=player.ty;
+  if(keys['w']||keys['ц']||keys['arrowup'])ny--;
+  if(keys['s']||keys['ы']||keys['arrowdown'])ny++;
+  if(keys['a']||keys['ф']||keys['arrowleft'])nx--;
+  if(keys['d']||keys['в']||keys['arrowright'])nx++;
+  if(nx!==player.tx||ny!==player.ty){
+    if(getTile(nx,ny).base===1)return;
+    player.tx=nx;player.ty=ny;player.lastMoveTime=now;
+    
+    // Удаляем дальние чанки при каждом шаге
+    unloadFarChunks();
+  }
 }
 
 // UI
@@ -1850,11 +2027,68 @@ document.getElementById('btn-respawn').addEventListener('click',function(){playe
 function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
 window.addEventListener('resize',resizeCanvas);resizeCanvas();
 let lastTime=0,cleanupTimer=0;
+
+function updateDebugPanel() {
+  let panel = document.getElementById('debug-panel');
+  if (!panel || panel.style.display === 'none') return;
+  
+  let tile = getTile(player.tx, player.ty);
+  let biomeNames = {
+    'grass': 'Равнина',
+    'forest': 'Лес',
+    'mixed_forest': 'Смешанный лес',
+    'taiga': 'Тайга',
+    'snow': 'Снежная тайга',
+    'sand': 'Пустыня',
+    'stone': 'Горы',
+    'water': 'Вода'
+  };
+  
+  let tod = getTimeOfDay();
+  let progress = getDayProgress();
+  let timeLeft = tod === 'day' 
+    ? Math.ceil((DAY_DURATION - cycleTime) / 1000) 
+    : Math.ceil((FULL_CYCLE - cycleTime) / 1000);
+  
+  panel.innerHTML = 
+    'Endless Adventures v2.1\n' +
+    'Seed: ' + SEED + '; FPS: ' + fps + '\n' +
+    'Coords:' + ' X: ' + player.tx + ' (' + player.rx.toFixed(2) + ')' + '  Y: ' + player.ty + ' (' + player.ry.toFixed(2) + ')\n' +
+    'Зум: ' + zoom.toFixed(2) + '; Камера: ' + Math.round(camX) + ', ' + Math.round(camY) + '\n' +
+    'Noise: t: ' + smoothNoise(player.tx * 0.04 + 100, player.ty * 0.04 + 100).toFixed(3) + '  h: ' + smoothNoise(player.tx * 0.04 + 300, player.ty * 0.04 + 300).toFixed(3) + '  w: ' + smoothNoise(player.tx * 0.06 + 500, player.ty * 0.06 + 500).toFixed(3) +
+    'Biome: ' + (biomeNames[tile.biome] || tile.biome) + '\n' +
+    '─────────────────────────────\n' +
+    'Время: ' + (tod === 'day' ? '☀️ День' : '🌙 Ночь') + ' (' + Math.floor(progress * 100) + '%)\n' +
+    '  До смены: ' + timeLeft + ' сек\n' +
+    '  Всего прошло: ' + Math.floor(cycleTime / 1000) + ' сек\n' +
+    '─────────────────────────────\n' +
+    '🗺️ Чанки загружены: ' + Object.keys(chunks).length + '\n' +
+    '  Позиция чанка: ' + Math.floor(player.tx/CHUNK_SIZE) + ', ' + Math.floor(player.ty/CHUNK_SIZE) + '\n' +
+    '─────────────────────────────\n' +
+    '👾 Видимых сущностей: ' + getVisibleEntities().length + '\n' +
+    '─────────────────────────────\n' +
+    '⚔️ Игрок:\n' +
+    '  Уровень: ' + player.level + ' | XP: ' + player.xp + '/' + player.xpToNext + '\n' + 
+    '  HP: ' + player.hp + '/' + player.maxHp + '\n' +
+    '  Урон: ' + player.damage + ' | Дальность: ' + player.attackRange + '\n' +
+    '  Скорость: ' + player.moveDelay + 'мс | Кулдаун: ' + player.attackCooldownTime + 'мс\n' +
+    '  В палатке: ' + (player.inTent ? 'Да' : 'Нет') + '\n' +
+    '  Кулдаун атаки: ' + Math.ceil(player.attackCooldown / 1000 * 100) / 100 + ' сек\n' +
+    '🔍 Чанков в памяти: ' + Object.keys(chunks).length + '\n' +
+'🔍 Сущностей всего: ' + getVisibleEntities().length + '\n' +
+'🔍 Тайлов видно: ' + collectVisibleObjects().tiles.length + '\n'
+    '─────────────────────────────\n' +
+    '🎒 Инвентарь: ' + inventory.filter(function(x){return x!==null;}).length + '/8 занято\n' +
+    '  Выбран слот: ' + (selectedSlot + 1) + '\n' +
+    '  Предмет в руке: ' + (player.heldItem ? player.heldItem.item.name : 'нет');
+}
+
 function gameLoop(ts){
+  let unloadTimer = 0;
   let dt=lastTime?ts-lastTime:16;
   lastTime=ts;
   
-  if(!paused){
+if(!paused){
     cycleTime=(cycleTime+dt)%FULL_CYCLE;
     validateMonstersForTimeOfDay();
     burnMonstersInDay(dt);
@@ -1878,6 +2112,11 @@ for (let e of all) {
       }
     }
     cleanupTimer+=dt;
+//     unloadTimer += dt;
+// if (unloadTimer > 300) { // каждые 10 секунд
+//   unloadTimer = 0;
+//   unloadFarChunks();
+// }
     if(cleanupTimer>5000){cleanupTimer=0;cleanupDead();}
   }
   
@@ -1915,10 +2154,234 @@ for(let i = 0; i < allEntities.length; i++){
     }
   }
 }
-  
+  // Подсчёт FPS
+frameCount++;
+fpsTimer += dt;
+if (fpsTimer >= 1000) {
+  fps = frameCount;
+  frameCount = 0;
+  fpsTimer = 0;
+}
+
+// Авто-подстройка качества
+if (settings.qualityMode === 'auto') {
+  if (fps < 25 && settings.renderDistance > 6) {
+    settings.renderDistance = Math.max(6, settings.renderDistance - 2);
+    settings.showGrassDetails = false;
+    settings.showParticles = false;
+    settings.smoothBiomes = false;
+    settings.aiSkipFar = true;
+    settings.aiSkipDistance = 5;
+    cachedObjects = null;
+  } else if (fps < 40 && settings.renderDistance > 10) {
+    settings.renderDistance = Math.max(10, settings.renderDistance - 2);
+    settings.showGrassDetails = true;
+    settings.showParticles = false;
+    settings.smoothBiomes = true;
+    settings.aiSkipFar = true;
+    settings.aiSkipDistance = 8;
+    cachedObjects = null;
+  } else if (fps > 50 && settings.renderDistance < 16) {
+    settings.renderDistance = Math.min(24, settings.renderDistance + 2);
+    settings.showGrassDetails = true;
+    settings.showParticles = true;
+    settings.smoothBiomes = true;
+    settings.aiSkipFar = false;
+    cachedObjects = null;
+  }
+}
   render();
   requestAnimationFrame(gameLoop);
 }
+
+function unloadFarChunks() {
+  let range = settings.renderDistance + 1;
+  let minCX = Math.floor((player.tx - range) / CHUNK_SIZE);
+  let maxCX = Math.floor((player.tx + range) / CHUNK_SIZE);
+  let minCY = Math.floor((player.ty - range) / CHUNK_SIZE);
+  let maxCY = Math.floor((player.ty + range) / CHUNK_SIZE);
+  
+  let before = Object.keys(chunks).length;
+  for (let key in chunks) {
+    let [cx, cy] = key.split(',').map(Number);
+    if (cx < minCX || cx > maxCX || cy < minCY || cy > maxCY) {
+      delete chunks[key];
+    }
+  }
+  let after = Object.keys(chunks).length;
+  if (before !== after) {
+    console.log('Выгружено чанков: ' + (before - after) + ', осталось: ' + after);
+  }
+}
+
+function openSettings() {
+  let panel = document.getElementById('settings-panel');
+  let list = document.getElementById('settings-list');
+  
+  let html = '';
+  
+  // Выпадающий список режима
+  html += '<div style="margin-bottom:15px;"><b>⚡ Производительность / Качество:</b><br>' +
+    '<select id="set-mode" style="width:100%;padding:8px;font-family:monospace;font-size:14px;background:#2a2a4a;color:#fff;border:1px solid #888;border-radius:4px;">' +
+      '<option value="auto" '+(settings.qualityMode==='auto'?'selected':'')+'>🤖 Авто</option>' +
+      '<option value="presets" '+(settings.qualityMode==='presets'?'selected':'')+'>🎮 Пресеты</option>' +
+      '<option value="manual" '+(settings.qualityMode==='manual'?'selected':'')+'>🔧 Ручная настройка</option>' +
+    '</select></div>';
+  
+  // Режим АВТО — минимум настроек
+  // Режим АВТО — только настройки НЕ управляемые авто
+  if (settings.qualityMode === 'auto') {
+    html += '<div style="color:#aaa;font-size:12px;text-align:center;padding:10px;">🤖 Производительность настраивается автоматически</div>';
+    
+    // Текстуры (не управляется авто)
+    html += '<div style="margin-bottom:15px;"><b>🖼️ Текстуры:</b><br>' +
+      '<button id="set-textures" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showTextures?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showTextures?'✅ Вкл':'❌ Выкл')+'</button></div>';
+  }
+  
+  // Режим ПРЕСЕТЫ
+  if (settings.qualityMode === 'presets') {
+    html += '<div style="margin-bottom:15px;"><b>🎮 Выберите пресет:</b><br>' +
+      '<button id="set-low" style="padding:8px 15px;font-family:monospace;cursor:pointer;background:'+(settings.qualityPreset==='low'?'#a44':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;margin:2px;">🔴 Низкое</button>' +
+      '<button id="set-medium" style="padding:8px 15px;font-family:monospace;cursor:pointer;background:'+(settings.qualityPreset==='medium'?'#aa4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;margin:2px;">🟡 Среднее</button>' +
+      '<button id="set-high" style="padding:8px 15px;font-family:monospace;cursor:pointer;background:'+(settings.qualityPreset==='high'?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;margin:2px;">🟢 Высокое</button>' +
+      '</div>';
+    
+    // Текстуры (доступны всегда)
+    html += '<div style="margin-bottom:15px;"><b>🖼️ Текстуры:</b><br>' +
+      '<button id="set-textures" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showTextures?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showTextures?'✅ Вкл':'❌ Выкл')+'</button></div>';
+  }
+  
+  // Режим РУЧНОЙ — все настройки
+  if (settings.qualityMode === 'manual') {
+    html += '<div style="margin-bottom:15px;"><b>🗺️ Дальность прорисовки:</b> ' + settings.renderDistance + ' чанков<br>' +
+      '<input type="range" min="4" max="32" step="2" value="' + settings.renderDistance + '" id="set-render" style="width:100%;">' +
+      '<div style="font-size:10px;color:#aaa;">' + settings.renderDistance + ' (меньше = быстрее)</div></div>';
+    
+    html += '<div style="margin-bottom:15px;"><b>🧠 Пропуск AI дальних мобов:</b><br>' +
+      '<button id="set-ai-skip" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.aiSkipFar?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.aiSkipFar?'✅ Вкл':'❌ Выкл')+'</button></div>';
+    
+    html += '<div style="margin-bottom:15px;"><b>📏 Дистанция пропуска AI:</b> ' + settings.aiSkipDistance + ' клеток<br>' +
+      '<input type="range" min="5" max="20" step="1" value="' + settings.aiSkipDistance + '" id="set-ai-dist" style="width:100%;"></div>';
+    
+    html += '<div style="margin-bottom:15px;"><b>🌿 Детали травы:</b><br>' +
+      '<button id="set-grass" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showGrassDetails?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showGrassDetails?'✅ Вкл':'❌ Выкл')+'</button></div>';
+    
+    html += '<div style="margin-bottom:15px;"><b>✨ Частицы (снег, рябь):</b><br>' +
+      '<button id="set-particles" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showParticles?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showParticles?'✅ Вкл':'❌ Выкл')+'</button></div>';
+    
+    html += '<div style="margin-bottom:15px;"><b>🖌️ Плавные переходы биомов:</b><br>' +
+      '<button id="set-smooth" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.smoothBiomes?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.smoothBiomes?'✅ Вкл':'❌ Выкл')+'</button></div>';
+    
+    html += '<div style="margin-bottom:15px;"><b>🖼️ Текстуры:</b><br>' +
+      '<button id="set-textures" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showTextures?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showTextures?'✅ Вкл':'❌ Выкл')+'</button></div>';
+  }
+  
+  list.innerHTML = html;
+  panel.style.display = 'flex';
+  paused = true;
+  
+  if (settings.qualityMode === 'auto') {
+    document.getElementById('set-textures').onclick = function() {
+      settings.showTextures = !settings.showTextures;
+      if (!settings.showTextures) settings.smoothBiomes = false;
+      openSettings();
+    };
+  }
+
+  // Обработчик выпадающего списка
+  document.getElementById('set-mode').onchange = function() {
+    settings.qualityMode = this.value;
+    openSettings();
+  };
+  
+  // Обработчики для ручного режима
+  if (settings.qualityMode === 'manual') {
+    document.getElementById('set-render').oninput = function() {
+      settings.renderDistance = parseInt(this.value);
+      cachedObjects = null;
+      openSettings();
+    };
+    document.getElementById('set-ai-skip').onclick = function() {
+      settings.aiSkipFar = !settings.aiSkipFar;
+      openSettings();
+    };
+    document.getElementById('set-ai-dist').oninput = function() {
+      settings.aiSkipDistance = parseInt(this.value);
+      openSettings();
+    };
+    document.getElementById('set-grass').onclick = function() {
+      settings.showGrassDetails = !settings.showGrassDetails;
+      openSettings();
+    };
+    document.getElementById('set-particles').onclick = function() {
+      settings.showParticles = !settings.showParticles;
+      openSettings();
+    };
+    document.getElementById('set-smooth').onclick = function() {
+      settings.smoothBiomes = !settings.smoothBiomes;
+      openSettings();
+    };
+    document.getElementById('set-textures').onclick = function() {
+      settings.showTextures = !settings.showTextures;
+      if (!settings.showTextures) settings.smoothBiomes = false;
+      openSettings();
+    };
+  }
+  
+  // Обработчики для пресетов
+  if (settings.qualityMode === 'presets') {
+    document.getElementById('set-low').onclick = function() {
+      settings.qualityPreset = 'low';
+      settings.renderDistance = 8;
+      settings.showGrassDetails = false;
+      settings.showParticles = false;
+      settings.smoothBiomes = false;
+      settings.aiSkipFar = true;
+      settings.aiSkipDistance = 5;
+      cachedObjects = null;
+      openSettings();
+    };
+    document.getElementById('set-medium').onclick = function() {
+      settings.qualityPreset = 'medium';
+      settings.renderDistance = 16;
+      settings.showGrassDetails = true;
+      settings.showParticles = true;
+      settings.smoothBiomes = true;
+      settings.aiSkipFar = true;
+      settings.aiSkipDistance = 10;
+      cachedObjects = null;
+      openSettings();
+    };
+    document.getElementById('set-high').onclick = function() {
+      settings.qualityPreset = 'high';
+      settings.renderDistance = 24;
+      settings.showGrassDetails = true;
+      settings.showParticles = true;
+      settings.smoothBiomes = true;
+      settings.aiSkipFar = false;
+      cachedObjects = null;
+      openSettings();
+    };
+
+        // Обработчик текстур
+    document.getElementById('set-textures').onclick = function() {
+      settings.showTextures = !settings.showTextures;
+      if (!settings.showTextures) settings.smoothBiomes = false;
+      openSettings();
+    };
+  }
+  
+  document.getElementById('btn-settings-close').onclick = function() {
+    panel.style.display = 'none';
+    paused = false;
+    document.getElementById('pause-menu').classList.remove('active');
+  };
+}
+
+document.getElementById('btn-settings').addEventListener('click', function() {
+  document.getElementById('pause-menu').classList.remove('active');
+  openSettings();
+});
 
 player.tx=0;player.ty=0;
 // Проверка что не на воде при первом спавне
