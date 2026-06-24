@@ -159,23 +159,13 @@ const BIOMES = {
   }
 };
 
-const ALL_MOBS = {
-  zombie:   { name:'Зомби', texKey:'monster_zombie', type:'hostile', hp:35, damage:15, moveDelay:600, chaseRange:4, attackRange:1, attackCD:800, spawnTime:'night', biomes:['grass','forest','snow'], maxPerChunk:2, color:'#5a7a3a', xpReward:25, drops:[{name:'Кость',emoji:'🦴',texKey:'item_bone',chance:0.6},{name:'Гнилая плоть',emoji:'🥩',texKey:'item_rotten_flesh',chance:0.3}], spawnChance:0.015 },
-  skeleton: { name:'Скелет', texKey:'monster_skeleton', type:'hostile', hp:25, damage:10, moveDelay:400, chaseRange:5, attackRange:2, attackCD:600, spawnTime:'night', biomes:['stone','grass','snow'], maxPerChunk:2, color:'#ddd', xpReward:20, drops:[{name:'Кость',emoji:'🦴',texKey:'item_bone',chance:0.8},{name:'Лук',emoji:'🏹',texKey:'item_bow',chance:0.1}], spawnChance:0.012 },
-  fallen:   { name:'Падший', texKey:'monster_fallen', type:'hostile', hp:20, damage:7, moveDelay:300, chaseRange:6, attackRange:1, attackCD:400, spawnTime:'night', biomes:['grass','sand'], maxPerChunk:2, color:'#cc4444', xpReward:15, drops:[{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.5},{name:'Кожа',emoji:'🧥',texKey:'item_leather',chance:0.4}], spawnChance:0.010 },
-  demon:    { name:'Демон', texKey:'monster_demon', type:'hostile', hp:50, damage:20, moveDelay:450, chaseRange:7, attackRange:2, attackCD:700, spawnTime:'night', biomes:['stone'], maxPerChunk:1, color:'#ff4400', burnsInDay:true, xpReward:50, drops:[{name:'Сердце демона',emoji:'❤️‍🔥',texKey:'item_demon_heart',chance:0.4},{name:'Пепел',emoji:'🪶',texKey:'item_ash',chance:0.7}], spawnChance:0.005 },
-  ghoul:    { name:'Упырь', texKey:'monster_ghoul', type:'hostile', hp:30, damage:12, moveDelay:250, chaseRange:8, attackRange:1, attackCD:350, spawnTime:'night', biomes:['forest','grass'], maxPerChunk:2, color:'#9966cc', burnsInDay:true, xpReward:30, drops:[{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.5},{name:'Зелье',emoji:'🧪',texKey:'item_potion',chance:0.2}], spawnChance:0.010 },
-  shadow:   { name:'Тень', texKey:'monster_shadow', type:'hostile', hp:15, damage:8, moveDelay:500, chaseRange:6, attackRange:2, attackCD:500, spawnTime:'any', biomes:['stone','sand', 'snow'], maxPerChunk:1, color:'#222244', xpReward:35, drops:[{name:'Тёмная пыль',emoji:'✨',texKey:'item_dark_dust',chance:0.6},{name:'Душа',emoji:'👻',texKey:'item_soul',chance:0.3}], spawnChance:0.006 },
-  imp:      { name:'Бес', texKey:'monster_imp', type:'hostile', hp:18, damage:6, moveDelay:350, chaseRange:5, attackRange:3, attackCD:500, spawnTime:'night', biomes:['stone','sand'], maxPerChunk:1, color:'#ff8800', burnsInDay:true, xpReward:18, drops:[{name:'Рог беса',emoji:'👿',texKey:'item_imp_horn',chance:0.5},{name:'Сера',emoji:'💛',texKey:'item_sulfur',chance:0.4}], spawnChance:0.004 },
-  wolf:     { name:'Волк', texKey:'monster_wolf', type:'neutral', aggroChance: 0.3, hp:22, damage:9, moveDelay:350, chaseRange:5, attackRange:1, attackCD:450, spawnTime:'any', biomes:['forest','mixed_forest','taiga','snow'], maxPerChunk:1, color:'#888', xpReward:12, drops:[{name:'Волчья шкура',emoji:'🐺',texKey:'item_wolf_pelt',chance:0.5},{name:'Клык',emoji:'🦷',texKey:'item_fang',chance:0.6}], spawnChance:0.007 },
-  boar:     { name:'Кабан', texKey:'monster_boar', type:'neutral', hp:30, damage:11, moveDelay:400, chaseRange:4, attackRange:1, attackCD:500, spawnTime:'any', biomes:['mixed_forest','taiga','snow'], maxPerChunk:1, color:'#6b4c2b', xpReward:15, drops:[{name:'Кабанья шкура',emoji:'🐗',texKey:'item_boar_pelt',chance:0.5},{name:'Мясо',emoji:'🥩',texKey:'item_meat',chance:0.7}], spawnChance:0.005 },
-  spider:   { name:'🕷️ Паук', texKey:'monster_spider', type:'hostile', hp:15, damage:8, moveDelay:350, chaseRange:5, attackRange:1, attackCD:600, spawnTime:'any', biomes:['forest','mixed_forest','taiga'], maxPerChunk:1, color:'#444444', xpReward:12, drops:[{name:'🕸️ Паутина',emoji:'🕸️',texKey:'item_web',chance:0.7},{name:'🦷 Ядовитый клык',emoji:'🦷',texKey:'item_venom_fang',chance:0.3}], spawnChance:0.003 },
-  snake:    { name:'Змея', texKey:'monster_snake', type:'neutral', aggroChance: 0.5, hp:15, damage:6, moveDelay:350, chaseRange:5, attackRange:2, attackCD:800, spawnTime:'any', biomes:['sand','grass'], maxPerChunk:1, color:'#137400', xpReward:12, drops:[{name:'Кожа',emoji:'🧥',texKey:'item_leather',chance:0.5},{name:'🦷 Ядовитый клык',emoji:'🦷',texKey:'item_venom_fang',chance:0.4}], spawnChance:0.005 },
-  cow:      { name:'Корова', texKey:'animal_cow', type:'peaceful', hp:15, color:'#f5f5dc', dropName:'🥩 Мясо', dropEmoji:'🥩', dropTexKey:'item_meat', dropHeal:20, xpReward:5, spawnTime: 'any', biomes:['grass'], maxPerChunk:1, spawnChance:0.003 },
-  deer:     { name:'Олень', texKey:'animal_deer', type:'peaceful', hp:12, color:'#c4a46c', dropName:'🍖 Оленина', dropEmoji:'🍖', dropTexKey:'item_venison', dropHeal:15, xpReward:8, spawnTime: 'any', biomes:['mixed_forest','snow','taiga'], maxPerChunk:1, spawnChance:0.003, fleeFrom: ['wolf'] },
-  rabbit:   { name:'Кролик', texKey:'animal_rabbit', type:'peaceful', hp:5, color:'#ccc', dropName:'🍗 Крольчатина', dropEmoji:'🍗', dropTexKey:'item_rabbit_meat', dropHeal:8, xpReward:3, spawnTime: 'any', biomes:['forest','snow','taiga'], maxPerChunk:2, spawnChance:0.006, fleeFrom: ['wolf', 'snake']},
-  chicken:  { name:'Курица', texKey:'animal_chicken', type:'peaceful', hp:3, color:'#fff', dropName:'🍳 Яйцо', dropEmoji:'🍳', dropTexKey:'item_egg', dropHeal:5, xpReward:2, spawnTime: 'any', biomes:['grass','forest'], maxPerChunk:1, spawnChance:0.008 }
-};
+// Загружаем JSON из файла
+let ALL_MOBS = {};
+
+async function loadJSON(){
+    const data = await fetch('./mobs.json').then(r => r.json());
+    Object.assign(ALL_MOBS, data);
+}
 
 // Ресурсы
 const RESOURCE_TYPES = {
@@ -1185,130 +1175,138 @@ function updateAI(e, dt, isPeaceful) {
     else { e.rx += (ddx / dist) * speed; e.ry += (ddy / dist) * speed; }
   }
   
-  if (isPeaceful) {
-    // Проверка fleeFrom — убегать от хищников
-    if (!e.fleeTimer && e.fleeFrom) {
-      let allEnts = getVisibleEntities();
-      for (let j = 0; j < allEnts.length; j++) {
-        let other = allEnts[j];
-        if (other.hp > 0 && other.type === 'monster' && other.mobKey && e.fleeFrom.indexOf(other.mobKey) !== -1) {
-          let distToThreat = Math.sqrt((e.tx - other.tx) ** 2 + (e.ty - other.ty) ** 2);
-          if (distToThreat < 5) {
-            e.fleeTimer = 2000;
-            e._fleeFrom = { tx: other.tx, ty: other.ty };
-            break;
-          }
+  // Проверка fleeFrom — для ВСЕХ
+  if (!e.fleeTimer && e.fleeFrom) {
+    let allEnts = getVisibleEntities();
+    for (let j = 0; j < allEnts.length; j++) {
+      let other = allEnts[j];
+      if (other.hp > 0 && other.mobKey && e.fleeFrom.indexOf(other.mobKey) !== -1) {
+        let distToThreat = Math.sqrt((e.tx - other.tx) ** 2 + (e.ty - other.ty) ** 2);
+        if (distToThreat < 5) {
+          e.fleeTimer = 2000;
+          e._fleeFrom = { tx: other.tx, ty: other.ty };
+          ai.state = 'flee';
+          break;
         }
       }
     }
+  }
+  
+  // Если убегает
+  if (e.fleeTimer > 0) {
+    e.fleeTimer -= dt;
+    ai.moveCooldown -= dt;
+    let fleeTarget = e._fleeFrom || { tx: player.tx, ty: player.ty };
+    let distToThreat = Math.sqrt((e.tx - fleeTarget.tx) ** 2 + (e.ty - fleeTarget.ty) ** 2);
+    if (ai.moveCooldown <= 0 && distToThreat < 8 && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
+      ai.moveCooldown = 250 + Math.random() * 200;
+      let dx = -Math.sign(fleeTarget.tx - e.tx), dy = -Math.sign(fleeTarget.ty - e.ty);
+      if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
+      else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; }
+    }
+    return;
+  }
+  
+  // Мирные без fleeTimer — бродим
+  if (isPeaceful) {
+    ai.idleTimer -= dt;
+    if (ai.idleTimer <= 0) { ai.idleTimer = 2000 + Math.random() * 4000; ai.wanderTarget = { tx: e.tx + Math.floor(Math.random() * 4) - 2, ty: e.ty + Math.floor(Math.random() * 4) - 2 }; }
+    if (ai.wanderTarget && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
+      let d = Math.abs(e.tx - ai.wanderTarget.tx) + Math.abs(e.ty - ai.wanderTarget.ty);
+      if (d > 0) { ai.moveCooldown -= dt; if (ai.moveCooldown <= 0) { ai.moveCooldown = 500 + Math.random() * 300;
+        let dx = Math.sign(ai.wanderTarget.tx - e.tx), dy = Math.sign(ai.wanderTarget.ty - e.ty);
+        if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
+        else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; } }
+      } else { ai.wanderTarget = null; ai.idleTimer = 2000 + Math.random() * 3000; }
+    }
+    return;
+  }
+  
+  // Враждебные / нейтральные
+  let isAggressive = e._isAggressive || (!e.neutral);
+  let shouldChase = false;
+  
+  // Охота на добычу
+  if (isAggressive && ai.state !== 'chase') {
+    let allEnts = getVisibleEntities();
+    for (let j = 0; j < allEnts.length; j++) {
+      let prey = allEnts[j];
+      if (prey.hp > 0 && prey.mobKey && prey !== e) {
+        let canHunt = false;
+        if (e.huntTargets) {
+          canHunt = e.huntTargets.indexOf(prey.mobKey) !== -1;
+        } else {
+          canHunt = prey.type === 'peaceful';
+        }
+        if (!canHunt) continue;
+        
+        let distToPrey = Math.sqrt((e.tx - prey.tx) ** 2 + (e.ty - prey.ty) ** 2);
+        if (distToPrey <= e.chaseRange) {
+          shouldChase = true;
+          ai._hunting = prey;
+          break;
+        }
+      }
+    }
+  }
+  
+  // Преследование игрока
+  if (!shouldChase) {
+    if (isAggressive) {
+      let effectiveChaseRange = player.inTent ? e.chaseRange / 2 : e.chaseRange;
+      if (distToPlayer <= effectiveChaseRange && player.hp > 0) shouldChase = true;
+    } else if (e.neutral) {
+      if (e._wasAttacked && distToPlayer <= e.chaseRange && player.hp > 0) shouldChase = true;
+    }
+  }
+  
+  if (shouldChase) { ai.state = 'chase'; ai.forgetTimer = 5000; }
+  
+  if (ai.state === 'chase') {
+    let target = ai._hunting || { tx: player.tx, ty: player.ty, hp: player.hp };
+    let distToTarget = Math.sqrt((e.tx - target.tx) ** 2 + (e.ty - target.ty) ** 2);
     
-    if (e.fleeTimer > 0) { e.fleeTimer -= dt; ai.state = 'flee'; } else { ai.state = 'idle'; }
-    if (ai.state === 'flee') {
+    ai.forgetTimer -= dt;
+    if (ai.forgetTimer <= 0 || (target === player && player.hp <= 0) || (ai._hunting && ai._hunting.hp <= 0)) {
+      ai.state = 'idle'; ai.idleTimer = 1000 + Math.random() * 2000;
+      e._wasAttacked = false; ai._hunting = null;
+    } else {
       ai.moveCooldown -= dt;
-      let fleeTarget = e._fleeFrom || { tx: player.tx, ty: player.ty };
-      let distToThreat = Math.sqrt((e.tx - fleeTarget.tx) ** 2 + (e.ty - fleeTarget.ty) ** 2);
-      if (ai.moveCooldown <= 0 && distToThreat < 6 && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
-        ai.moveCooldown = 250 + Math.random() * 200;
-        let dx = -Math.sign(fleeTarget.tx - e.tx), dy = -Math.sign(fleeTarget.ty - e.ty);
+      if (ai.moveCooldown <= 0 && distToTarget > e.attackRange && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
+        ai.moveCooldown = e.moveDelay + Math.random() * 200;
+        let dx = Math.sign(target.tx - e.tx), dy = Math.sign(target.ty - e.ty);
         if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
         else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; }
       }
-    } else {
-      ai.idleTimer -= dt;
-      if (ai.idleTimer <= 0) { ai.idleTimer = 2000 + Math.random() * 4000; ai.wanderTarget = { tx: e.tx + Math.floor(Math.random() * 4) - 2, ty: e.ty + Math.floor(Math.random() * 4) - 2 }; }
-      if (ai.wanderTarget && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
-        let d = Math.abs(e.tx - ai.wanderTarget.tx) + Math.abs(e.ty - ai.wanderTarget.ty);
-        if (d > 0) { ai.moveCooldown -= dt; if (ai.moveCooldown <= 0) { ai.moveCooldown = 500 + Math.random() * 300;
-          let dx = Math.sign(ai.wanderTarget.tx - e.tx), dy = Math.sign(ai.wanderTarget.ty - e.ty);
-          if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
-          else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; } }
-        } else { ai.wanderTarget = null; ai.idleTimer = 2000 + Math.random() * 3000; }
-      }
-    }
-  } else {
-    let isNeutral = e.neutral === true && !e._isAggressive;
-    let shouldChase = false;
-    let chaseTarget = null;
-    
-    // Агрессивный нейтрал может охотиться на мирных
-    if (e._isAggressive && ai.state !== 'chase') {
-      let allEnts = getVisibleEntities();
-      for (let j = 0; j < allEnts.length; j++) {
-        let prey = allEnts[j];
-        if (prey.hp > 0 && prey.type === 'peaceful' && prey !== e) {
-          let distToPrey = Math.sqrt((e.tx - prey.tx) ** 2 + (e.ty - prey.ty) ** 2);
-          if (distToPrey <= e.chaseRange) {
-            shouldChase = true;
-            chaseTarget = prey;
-            ai._hunting = prey;
-            break;
+      if (distToTarget <= e.attackRange && e.attackCooldown <= 0) {
+        if (ai._hunting) {
+          ai._hunting.hp -= e.damage;
+          ai._hunting.fleeTimer = 2000;
+          e.attackCooldown = e.attackCooldownTime;
+          if (ai._hunting.hp <= 0) {
+            ai._hunting.hp = -1;
+            ai._hunting.deathTime = Date.now();
+            ai._hunting = null;
+            ai.state = 'idle';
           }
+        } else {
+          player.hp -= e.damage; e.attackCooldown = e.attackCooldownTime;
+          addLog('💥 ' + e.name + ' атакует! -' + e.damage + ' HP');
+          if (player.hp <= 0) { player.hp = 0; addLog('☠️ ТЫ ПОГИБ...'); document.getElementById('death-screen').classList.add('active'); }
         }
       }
     }
-    
-    if (!shouldChase) {
-      if (!isNeutral && !e.neutral) { // чистый hostile
-        let effectiveChaseRange = player.inTent ? e.chaseRange / 2 : e.chaseRange;
-        if (distToPlayer <= effectiveChaseRange && player.hp > 0) shouldChase = true;
-      } else if (e._isAggressive) { // агрессивный нейтрал
-        let effectiveChaseRange = player.inTent ? e.chaseRange / 2 : e.chaseRange;
-        if (distToPlayer <= effectiveChaseRange && player.hp > 0) shouldChase = true;
-      } else if (e.neutral) { // мирный нейтрал
-        if (e._wasAttacked && distToPlayer <= e.chaseRange && player.hp > 0) shouldChase = true;
-      }
-    }
-    
-    if (shouldChase) { ai.state = 'chase'; ai.forgetTimer = 5000; }
-    
-    if (ai.state === 'chase') {
-      let target = ai._hunting || { tx: player.tx, ty: player.ty, hp: player.hp };
-      let distToTarget = Math.sqrt((e.tx - target.tx) ** 2 + (e.ty - target.ty) ** 2);
-      
-      ai.forgetTimer -= dt;
-      if (ai.forgetTimer <= 0 || (target === player && player.hp <= 0) || (ai._hunting && ai._hunting.hp <= 0)) {
-        ai.state = 'idle'; ai.idleTimer = 1000 + Math.random() * 2000;
-        e._wasAttacked = false; ai._hunting = null;
-      } else {
-        ai.moveCooldown -= dt;
-        if (ai.moveCooldown <= 0 && distToTarget > e.attackRange && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
-          ai.moveCooldown = e.moveDelay + Math.random() * 200;
-          let dx = Math.sign(target.tx - e.tx), dy = Math.sign(target.ty - e.ty);
-          if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
-          else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; }
-        }
-        if (distToTarget <= e.attackRange && e.attackCooldown <= 0) {
-          if (ai._hunting) {
-            // Атака на мирного
-            ai._hunting.hp -= e.damage;
-            ai._hunting.fleeTimer = 2000;
-            e.attackCooldown = e.attackCooldownTime;
-            if (ai._hunting.hp <= 0) {
-              ai._hunting.hp = -1;
-              ai._hunting.deathTime = Date.now();
-              ai._hunting = null;
-              ai.state = 'idle';
-            }
-          } else {
-            // Атака на игрока
-            player.hp -= e.damage; e.attackCooldown = e.attackCooldownTime;
-            addLog('💥 ' + e.name + ' атакует! -' + e.damage + ' HP');
-            if (player.hp <= 0) { player.hp = 0; addLog('☠️ ТЫ ПОГИБ...'); document.getElementById('death-screen').classList.add('active'); }
-          }
-        }
-      }
-    } else if (ai.state === 'idle') {
-      ai.idleTimer -= dt;
-      if (ai.idleTimer <= 0) { ai.state = 'wander'; ai.wanderTarget = { tx: e.tx + Math.floor(Math.random() * 6) - 3, ty: e.ty + Math.floor(Math.random() * 6) - 3 }; }
-    } else if (ai.state === 'wander') {
-      if (Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
-        let distToTarget = Math.abs(e.tx - ai.wanderTarget.tx) + Math.abs(e.ty - ai.wanderTarget.ty);
-        if (distToTarget <= 0) { ai.state = 'idle'; ai.idleTimer = 1000 + Math.random() * 3000; }
-        else { ai.moveCooldown -= dt; if (ai.moveCooldown <= 0) { ai.moveCooldown = e.moveDelay + Math.random() * 300;
-          let dx = Math.sign(ai.wanderTarget.tx - e.tx), dy = Math.sign(ai.wanderTarget.ty - e.ty);
-          if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
-          else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; } } }
-      }
+  } else if (ai.state === 'idle') {
+    ai.idleTimer -= dt;
+    if (ai.idleTimer <= 0) { ai.state = 'wander'; ai.wanderTarget = { tx: e.tx + Math.floor(Math.random() * 6) - 3, ty: e.ty + Math.floor(Math.random() * 6) - 3 }; }
+  } else if (ai.state === 'wander') {
+    if (Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
+      let distToTarget = Math.abs(e.tx - ai.wanderTarget.tx) + Math.abs(e.ty - ai.wanderTarget.ty);
+      if (distToTarget <= 0) { ai.state = 'idle'; ai.idleTimer = 1000 + Math.random() * 3000; }
+      else { ai.moveCooldown -= dt; if (ai.moveCooldown <= 0) { ai.moveCooldown = e.moveDelay + Math.random() * 300;
+        let dx = Math.sign(ai.wanderTarget.tx - e.tx), dy = Math.sign(ai.wanderTarget.ty - e.ty);
+        if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
+        else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; } } }
     }
   }
 }
@@ -2613,4 +2611,12 @@ player.xpToNext=getXpForLevel(1);
 let startPos=tileToScreen(player.tx, player.ty);
 camX=canvas.width/2-startPos.x;
 camY=canvas.height/2-startPos.y;
-loadTextures().then(function(){requestAnimationFrame(gameLoop);addLog('🎮 v2.1 — Дроп на землю + Drag&Drop!');updateInventoryUI();});
+async function startGame() {
+  await loadJSON();
+  loadTextures().then(function(){
+    requestAnimationFrame(gameLoop);
+    addLog('🎮 Готово!');
+    updateInventoryUI();
+  });
+}
+startGame();

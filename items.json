@@ -1,0 +1,102 @@
+{
+  "bone": {
+    "name": "Кость",
+    "emoji": "🦴",
+    "texKey": "item_bone"
+  },
+  "rotten_flesh": {
+    "name": "Гнилая плоть",
+    "emoji": "🥩",
+    "texKey": "item_rotten_flesh"
+  },
+  "bow": {
+    "name": "Лук",
+    "emoji": "🏹",
+    "texKey": "item_bow"
+  },
+  "fang": {
+    "name": "Клык",
+    "emoji": "🦷",
+    "texKey": "item_fang"
+  },
+  "leather": {
+    "name": "Кожа",
+    "emoji": "🧥",
+    "texKey": "item_leather"
+  },
+  "demon_heart": {
+    "name": "Сердце демона",
+    "emoji": "❤️‍🔥",
+    "texKey": "item_demon_heart"
+  },
+  "ash": {
+    "name": "Пепел",
+    "emoji": "🪶",
+    "texKey": "item_ash"
+  },
+  "potion": {
+    "name": "Зелье",
+    "emoji": "🧪",
+    "texKey": "item_potion"
+  },
+  "dark_dust": {
+    "name": "Тёмная пыль",
+    "emoji": "✨",
+    "texKey": "item_dark_dust"
+  },
+  "soul": {
+    "name": "Душа",
+    "emoji": "👻",
+    "texKey": "item_soul"
+  },
+  "imp_horn": {
+    "name": "Рог беса",
+    "emoji": "👿",
+    "texKey": "item_imp_horn"
+  },
+  "sulfur": {
+    "name": "Сера",
+    "emoji": "💛",
+    "texKey": "item_sulfur"
+  },
+  "wolf_pelt": {
+    "name": "Волчья шкура",
+    "emoji": "🐺",
+    "texKey": "item_wolf_pelt"
+  },
+  "boar_pelt": {
+    "name": "Кабанья шкура",
+    "emoji": "🐗",
+    "texKey": "item_boar_pelt"
+  },
+  "meat": {
+    "name": "Мясо",
+    "emoji": "🥩",
+    "texKey": "item_meat"
+  },
+  "venison": {
+    "name": "Оленина",
+    "emoji": "🍖",
+    "texKey": "item_venison"
+  },
+  "rabbit_meat": {
+    "name": "Крольчатина",
+    "emoji": "🍗",
+    "texKey": "item_rabbit_meat"
+  },
+  "egg": {
+    "name": "Яйцо",
+    "emoji": "🍳",
+    "texKey": "item_egg"
+  },
+  "web": {
+    "name": "Паутина",
+    "emoji": "🕸️",
+    "texKey": "item_web"
+  },
+  "venom_fang": {
+    "name": "Ядовитый клык",
+    "emoji": "🦷",
+    "texKey": "item_venom_fang"
+  }
+}
