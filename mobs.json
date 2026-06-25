@@ -9,26 +9,17 @@
     "chaseRange": 4, 
     "attackRange": 1, 
     "attackCD": 800,
-    "spawnTime": "night", 
-    "biomes": ["grass","forest","snow"], 
-    "maxPerChunk": 2,
     "color": "#5a7a3a", 
     "xpReward": 25,
     "drops": [
-        {
-        "name": "Кость", 
-        "emoji": "🦴", 
-        "texKey": "item_bone", 
-        "chance": 0.6
-        },
-        {
-        "name": "Гнилая плоть", 
-        "emoji": "🥩", 
-        "texKey": "item_rotten_flesh", 
-        "chance": 0.3
-        }
+        {"itemKey": "item_bone", "chance": 0.6, "count": 1},
+        {"itemKey": "item_rotten_flesh", "chance": 0.3, "count": 1}
     ],
-    "spawnChance": 0.015
+    "spawn": [
+        {"biome": "grass", "chance": 0.015, "maxPerChunk": 2, "spawnTime": "night"},
+        {"biome": "forest", "chance": 0.012, "maxPerChunk": 2, "spawnTime": "night"},
+        {"biome": "snow", "chance": 0.006, "maxPerChunk": 1, "spawnTime": "night"}
+    ]
 },
 "skeleton": {
     "name": "Скелет", 
@@ -39,26 +30,18 @@
     "moveDelay": 400, 
     "chaseRange": 5, 
     "attackRange": 2,
-    "attackCD": 600,
-    "spawnTime": "night", 
-    "biomes": ["stone","grass","snow"], 
-    "maxPerChunk": 2,
+    "attackCD": 600, 
     "color": "#ddd", 
     "xpReward": 20,
     "drops": [
-        {
-        "name": "Кость", 
-        "emoji": "🦴", 
-        "texKey": "item_bone", 
-        "chance": 0.8
-        },
-        {
-        "name": "Лук", 
-        "emoji": "🏹", 
-        "texKey": "item_bow", 
-        "chance": 0.1}
-    ],
-    "spawnChance": 0.012
+        {"texKey": "item_bone", "chance": 0.8},
+        {"texKey": "item_bow", "chance": 0.1}
+    ],    
+    "spawn": [
+        {"biome": "stone", "chance": 0.015, "maxPerChunk": 1, "spawnTime": "night"},
+        {"biome": "grass", "chance": 0.006, "maxPerChunk": 1, "spawnTime": "night"},
+        {"biome": "snow", "chance": 0.012, "maxPerChunk": 1, "spawnTime": "night"}
+    ]
 },
 "fallen": {
     "name": "Падший", 
@@ -76,18 +59,8 @@
     "color": "#cc4444", 
     "xpReward": 15,
     "drops": [
-        {
-        "name": "Клык", 
-        "emoji": "🦷", 
-        "texKey": "item_fang", 
-        "chance": 0.5
-        },
-        {
-        "name": "Кожа", 
-        "emoji": "🧥", 
-        "texKey": "item_leather", 
-        "chance": 0.4
-        }
+        {"texKey": "item_fang", "chance": 0.5},
+        {"texKey": "item_leather", "chance": 0.4}
     ],
     "spawnChance": 0.010
 },
@@ -108,18 +81,8 @@
     "burnsInDay": true, 
     "xpReward": 50,
     "drops": [
-        {
-        "name": "Сердце демона", 
-        "emoji": "❤️‍🔥", 
-        "texKey": "item_demon_heart", 
-        "chance": 0.4
-        },
-        {
-        "name": "Пепел", 
-        "emoji": "🪶", 
-        "texKey": "item_ash", 
-        "chance": 0.7
-        }
+        {"texKey": "item_demon_heart", "chance": 0.4},
+        {"texKey": "item_ash", "chance": 0.7}
     ],
     "spawnChance": 0.005
 },
@@ -140,16 +103,8 @@
     "burnsInDay": true, 
     "xpReward": 30,
     "drops": [
-        {
-        "name": "Клык", 
-        "emoji": "🦷", 
-        "texKey": "item_fang", 
-        "chance": 0.5},
-        {
-        "name": "Зелье", 
-        "emoji": "🧪", 
-        "texKey": "item_potion", 
-        "chance": 0.2}
+        {"texKey": "item_fang", "chance": 0.5},
+        {"texKey": "item_potion", "chance": 0.2}
     ],
     "spawnChance": 0.010
 },
@@ -169,18 +124,8 @@
     "color": "#222244", 
     "xpReward": 35,
     "drops": [
-        {
-        "name": "Тёмная пыль", 
-        "emoji": "✨", 
-        "texKey": "item_dark_dust", 
-        "chance": 0.6
-        },
-        {
-        "name": "Душа", 
-        "emoji": "👻", 
-        "texKey": "item_soul", 
-        "chance": 0.3
-        }
+        {"texKey": "item_dark_dust", "chance": 0.6},
+        {"texKey": "item_soul", "chance": 0.3}
     ],
     "spawnChance": 0.006
 },
@@ -201,18 +146,8 @@
     "burnsInDay": true, 
     "xpReward": 18,
     "drops": [
-        {
-        "name": "Рог беса", 
-        "emoji": "👿", 
-        "texKey": "item_imp_horn", 
-        "chance": 0.5
-        },
-        {
-        "name": "Сера", 
-        "emoji": "💛", 
-        "texKey": "item_sulfur", 
-        "chance": 0.4
-        }
+        {"texKey": "item_imp_horn", "chance": 0.5},
+        {"texKey": "item_sulfur", "chance": 0.4}
     ],
     "spawnChance": 0.004
 },
@@ -228,97 +163,154 @@
     "chaseRange": 5, 
     "attackRange": 1, 
     "attackCD": 450,
-    "spawnTime": "any", 
-    "biomes": ["forest","mixed_forest","taiga","snow"], 
-    "maxPerChunk": 1,
     "color": "#888", 
     "xpReward": 12,
     "drops": [
-        {
-        "name": "Волчья шкура", 
-        "emoji": "🐺", 
-        "texKey": "item_wolf_pelt", 
-        "chance": 0.5},
-        {
-        "name": "Клык", 
-        "emoji": "🦷", 
-        "texKey": "item_fang", 
-        "chance": 0.6}
+        {"texKey": "item_wolf_pelt", "chance": 0.5},
+        {"texKey": "item_fang", "chance": 0.6}
     ],
-    "spawnChance": 0.007
+    "spawn": [
+        {"biome": "forest", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "mixed_forest", "chance": 0.005, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "taiga", "chance": 0.008, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "snow", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"}
+    ]
 },
 "boar": {
     "name": "Кабан", 
     "texKey": "monster_boar", 
     "type": "neutral",
+    "aggroChance": 0.1,
     "hp": 30, 
     "damage": 11, 
     "moveDelay": 400, 
     "chaseRange": 4, 
     "attackRange": 1, 
     "attackCD": 500,
-    "spawnTime": "any", 
-    "biomes": ["mixed_forest","taiga","snow"], 
-    "maxPerChunk": 1,
     "color": "#6b4c2b", 
     "xpReward": 15,
     "drops": [
-        {
-        "name": "Кабанья шкура", 
-        "emoji": "🐗", 
-        "texKey": "item_boar_pelt", 
-        "chance": 0.5},
-      {"name": "Мясо", "emoji": "🥩", "texKey": "item_meat", "chance": 0.7}
+        {"texKey": "item_boar_pelt", "chance": 0.5},
+        {"texKey": "item_meat", "chance": 0.7}
     ],
-    "spawnChance": 0.005
-  },
-  "spider": {
-    "name": "🕷️ Паук", "texKey": "monster_spider", "type": "hostile",
-    "hp": 15, "damage": 8, "moveDelay": 350, "chaseRange": 5, "attackRange": 1, "attackCD": 600,
-    "spawnTime": "any", "biomes": ["forest","mixed_forest","taiga"], "maxPerChunk": 1,
-    "color": "#444444", "xpReward": 12,
+    "spawn": [
+        {"biome": "mixed_forest", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "taiga", "chance": 0.006, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "snow", "chance": 0.001, "maxPerChunk": 1, "spawnTime": "any"}
+    ]
+},
+"spider": {
+    "name": "🕷️ Паук", 
+    "texKey": "monster_spider", 
+    "type": "hostile",
+    "hp": 15, 
+    "damage": 8, 
+    "moveDelay": 350, 
+    "chaseRange": 5, 
+    "attackRange": 1, 
+    "attackCD": 600,
+    "color": "#444444", 
+    "xpReward": 12,
     "drops": [
-      {"name": "🕸️ Паутина", "emoji": "🕸️", "texKey": "item_web", "chance": 0.7},
-      {"name": "🦷 Ядовитый клык", "emoji": "🦷", "texKey": "item_venom_fang", "chance": 0.3}
+        {"texKey": "item_web","chance": 0.7},
+        {"texKey": "item_venom_fang", "chance": 0.3}
     ],
-    "spawnChance": 0.003
-  },
-  "snake": {
-    "name": "Змея", "texKey": "monster_snake", "type": "neutral",
+    "spawn": [
+        {"biome": "forest", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "mixed_forest", "chance": 0.005, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "taiga", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"}
+    ]
+},
+"snake": {
+    "name": "Змея", 
+    "texKey": "monster_snake", 
+    "type": "neutral",
     "aggroChance": 0.5,
-    "hp": 15, "damage": 6, "moveDelay": 350, "chaseRange": 5, "attackRange": 2, "attackCD": 800,
-    "spawnTime": "any", "biomes": ["sand","grass"], "maxPerChunk": 1,
-    "color": "#137400", "xpReward": 12,
+    "hp": 15, 
+    "damage": 6, 
+    "moveDelay": 350, 
+    "chaseRange": 5, 
+    "attackRange": 2, 
+    "attackCD": 800,
+    "color": "#137400", 
+    "xpReward": 12,
     "drops": [
-      {"name": "Кожа", "emoji": "🧥", "texKey": "item_leather", "chance": 0.5},
-      {"name": "🦷 Ядовитый клык", "emoji": "🦷", "texKey": "item_venom_fang", "chance": 0.4}
+        {"texKey": "item_leather", "chance": 0.5},
+        {"texKey": "item_venom_fang", "chance": 0.4}
     ],
-    "spawnChance": 0.005
-  },
-  "cow": {
-    "name": "Корова", "texKey": "animal_cow", "type": "peaceful",
-    "hp": 15, "color": "#f5f5dc",
-    "dropName": "🥩 Мясо", "dropEmoji": "🥩", "dropTexKey": "item_meat", "dropHeal": 20, "xpReward": 5,
-    "spawnTime": "any", "biomes": ["grass"], "maxPerChunk": 1, "spawnChance": 0.003
-  },
-  "deer": {
-    "name": "Олень", "texKey": "animal_deer", "type": "peaceful",
-    "hp": 12, "color": "#c4a46c",
-    "dropName": "🍖 Оленина", "dropEmoji": "🍖", "dropTexKey": "item_venison", "dropHeal": 15, "xpReward": 8,
-    "spawnTime": "any", "biomes": ["mixed_forest","snow","taiga"], "maxPerChunk": 1, "spawnChance": 0.003,
-    "fleeFrom": ["wolf"]
-  },
-  "rabbit": {
-    "name": "Кролик", "texKey": "animal_rabbit", "type": "peaceful",
-    "hp": 5, "color": "#ccc",
-    "dropName": "🍗 Крольчатина", "dropEmoji": "🍗", "dropTexKey": "item_rabbit_meat", "dropHeal": 8, "xpReward": 3,
-    "spawnTime": "any", "biomes": ["forest","snow","taiga"], "maxPerChunk": 2, "spawnChance": 0.006,
-    "fleeFrom": ["wolf","snake"]
-  },
-  "chicken": {
-    "name": "Курица", "texKey": "animal_chicken", "type": "peaceful",
-    "hp": 3, "color": "#fff",
-    "dropName": "🍳 Яйцо", "dropEmoji": "🍳", "dropTexKey": "item_egg", "dropHeal": 5, "xpReward": 2,
-    "spawnTime": "any", "biomes": ["grass","forest"], "maxPerChunk": 1, "spawnChance": 0.008
+    "spawn": [
+        {"biome": "sand", "chance": 0.005, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "grass", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "stone", "chance": 0.005, "maxPerChunk": 1, "spawnTime": "any"}
+    ]
+},
+"cow": {
+    "name": "Корова", 
+    "texKey": "animal_cow", 
+    "type": "peaceful",
+    "hp": 15, 
+    "color": "#f5f5dc",
+    "drops": [
+        {"itemKey": "meat", "chance": 1.0, "count": 1},
+        {"itemKey": "meat", "chance": 0.7, "count": 2}
+    ],
+    "xpReward": 5,
+    "spawn": [
+        {"biome": "grass", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"}
+    ]
+},
+"deer": {
+    "name": "Олень", 
+    "texKey": "animal_deer", 
+    "type": "peaceful",
+    "hp": 12, 
+    "color": "#c4a46c",
+    "drops": [
+        {"itemKey": "item_venison", "chance": 1.0, "count": 1}
+    ],
+    "xpReward": 8,
+    "fleeFrom": ["wolf"],
+    "spawn": [
+        {"biome": "mixed_forest", "chance": 0.005, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "snow", "chance": 0.007, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "taiga", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"}
+    ]
+},
+"rabbit": {
+    "name": "Кролик", 
+    "texKey": "animal_rabbit", 
+    "type": "peaceful",
+    "aggroChance": 0.95, 
+    "huntTargets": ["wolf", "player"],
+    "damage": 3, 
+    "attackRange": 1, 
+    "attackCD": 450,
+    "hp": 5, 
+    "color": "#ccc",
+    "drops": [
+        {"itemKey": "item_rabbit_meat", "chance": 1.0, "count": 1}
+    ],
+    "xpReward": 3,
+    "fleeFrom": ["wolf","snake"],
+    "spawn": [
+        {"biome": "forest", "chance": 0.006, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "snow", "chance": 0.008, "maxPerChunk": 2, "spawnTime": "any"},
+        {"biome": "taiga", "chance": 0.006, "maxPerChunk": 2, "spawnTime": "any"}
+    ]
+},
+"chicken": {
+    "name": "Курица", 
+    "texKey": "animal_chicken", 
+    "type": "peaceful",
+    "hp": 3, 
+    "color": "#fff",
+    "xpReward": 2, 
+    "drops": [
+        {"itemKey": "item_egg", "chance": 1.0, "count": 1}
+    ],
+    "spawn": [
+        {"biome": "grass", "chance": 0.010, "maxPerChunk": 1, "spawnTime": "any"},
+        {"biome": "forest", "chance": 0.006, "maxPerChunk": 1, "spawnTime": "any"}
+    ]
   }
 }

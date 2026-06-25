@@ -160,53 +160,26 @@ const BIOMES = {
 };
 
 // Загружаем JSON из файла
-let ALL_MOBS = {};
+const ALL_MOBS = {};
+const ALL_ITEMS = {};
+const ALL_RESOURCES = {};
+const ALL_TEXTURES = {};
+const ALL_RECIPES = {};
 
 async function loadJSON(){
-    const data = await fetch('./mobs.json').then(r => r.json());
-    Object.assign(ALL_MOBS, data);
+    const [mobs, items, resources, textures, recipes] = await Promise.all([
+        fetch('./mobs.json').then(r => r.json()),
+        fetch('items.json').then(r => r.json()),
+        fetch('resources.json').then(r => r.json()),
+        fetch('textures.json').then(r => r.json()),
+        fetch('recipes.json').then(r => r.json())
+    ]);
+    Object.assign(ALL_MOBS, mobs);
+    Object.assign(ALL_ITEMS, items);
+    Object.assign(ALL_RESOURCES, resources);
+    Object.assign(ALL_TEXTURES, textures);
+    Object.assign(ALL_RECIPES, recipes);
 }
-
-// Ресурсы
-const RESOURCE_TYPES = {
-  tree:   { name:'Дерево', texKey:'tree', hp:20, color:'#6b4c2b', h:14, drops:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',chance:1.0,count:2},{name:'Палка',emoji:'🥢',texKey:'item_stick',chance:0.5,count:1}] },
-  pine:   { name:'Сосна', texKey:'pine', hp:25, color:'#3a6b2f', h:16, drops:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',chance:1.0,count:3},{name:'Смола',emoji:'🟤',texKey:'item_resin',chance:0.4,count:1}] },
-  stone:  { name:'Камень', texKey:'stone', hp:30, color:'#888', h:8, drops:[{name:'Булыжник',emoji:'🪨',texKey:'item_rock',chance:1.0,count:2},{name:'Кремень',emoji:'💎',texKey:'item_flint',chance:0.3,count:1}] },
-  ore:    { name:'Руда', texKey:'ore', hp:40, color:'#5b9bd5', h:9, drops:[{name:'Железная руда',emoji:'⛏️',texKey:'item_iron_ore',chance:1.0,count:2},{name:'Золотой самородок',emoji:'🌟',texKey:'item_gold_nugget',chance:0.1,count:1}] },
-  cactus: { name:'Кактус', texKey:'cactus', hp:15, color:'#5a8a3a', h:12, drops:[{name:'Кактус',emoji:'🌵',texKey:'item_cactus',chance:1.0,count:1},{name:'Вода',emoji:'💧',texKey:'item_water',chance:0.5,count:1}] },
-  snow_tree: { name:'Заснеженное дерево', texKey:'snow_tree', hp:25, color:'#d0d8e0', h:14, drops:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',chance:1.0,count:2},{name:'Палка',emoji:'🥢',texKey:'item_stick',chance:0.5,count:1},{name:'Снежок',emoji:'❄️',texKey:'item_snowball',chance:0.6,count:1}] },
-  ice_rock: { name:'Ледяной камень', texKey:'stone', hp:35, color:'#c8d8f0', h:8, drops:[{name:'Булыжник',emoji:'🪨',texKey:'item_rock',chance:0.5,count:2},{name:'Лёд',emoji:'🧊',texKey:'item_ice',chance:0.5,count:1}] },
-  bush: { name:'🌿 Куст', texKey:null, hp:10, color:'#5a8a3a', h:6, drops:[{name:'Палка',emoji:'🥢',texKey:'item_stick',chance:1.0,count:1},{name:'Волокно',emoji:'🧵',texKey:'item_fiber',chance:0.5,count:1}] },
-  wheat: { name:'🌾 Пшеница', texKey:null, hp:5, color:'#d4c47c', h:8, drops:[{name:'Пшеница',emoji:'🌾',texKey:'item_wheat',chance:1.0,count:1},{name:'Семена',emoji:'🌱',texKey:'item_seeds',chance:0.5,count:1}] }
-};
-
-// Рецепты
-const RECIPES = {
-  'campfire': {
-    name:'🔥 Костёр', emoji:'🔥', texKey:'item_campfire',
-    ingredients:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',count:2},{name:'Палка',emoji:'🥢',texKey:'item_stick',count:1}],
-    result:{name:'🔥 Костёр',emoji:'🔥',texKey:'item_campfire',count:1},
-    placeable:true, lightRadius:4
-  },
-  'torch': {
-    name:'🕯️ Факел', emoji:'🕯️', texKey:'item_torch',
-    ingredients:[{name:'Палка',emoji:'🥢',texKey:'item_stick',count:1},{name:'Смола',emoji:'🟤',texKey:'item_resin',count:1}],
-    result:{name:'🕯️ Факел',emoji:'🕯️',texKey:'item_torch',count:1},
-    placeable:true, lightRadius:2
-  },
-  'chest': {
-    name:'📦 Сундук', emoji:'📦', texKey:'item_chest',
-    ingredients:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',count:4}],
-    result:{name:'📦 Сундук',emoji:'📦',texKey:'item_chest',count:1},
-    placeable:true, isChest:true
-  },
-  'tent': {
-  name:'⛺ Палатка', emoji:'⛺', texKey:'item_tent',
-  ingredients:[{name:'Древесина',emoji:'🪵',texKey:'item_wood',count:3},{name:'Волчья шкура',emoji:'🐺',texKey:'item_wolf_pelt',count:2}],
-  result:{name:'⛺ Палатка',emoji:'⛺',texKey:'item_tent',count:1},
-  placeable:true, isTent:true
-}
-};
 
 // Съедобное
 const EDIBLE_ITEMS = {
@@ -230,76 +203,6 @@ const COOKING_RECIPES = {
   '🍖 Оленина': { result: '🍖 Жареная оленина', emoji: '🍖', time: 10000 },
   '🍗 Крольчатина': { result: '🍗 Жареная крольчатина', emoji: '🍗', time: 8000 },
   '🍳 Яйцо': { result: '🍳 Жареное яйцо', emoji: '🍳', time: 5000 }
-};
-
-// Текстуры
-const TEXTURE_PATHS = {
-  tile_grass:'img/tile_grass.png', 
-  tile_water:'img/tile_water.png', 
-  tile_snow:'img/tile_snow.png', 
-  tile_sand:'img/tile_sand.png', 
-  tile_stone:'img/tile_stone.png',
-  player:'img/player.png', 
-  tree:'img/tree.png', 
-  snow_tree: 'img/snow_tree.png', 
-  pine:'img/pine.png', 
-  stone:'img/stone.png', 
-  ore:'img/ore.png', 
-  cactus:'img/cactus.png',
-  monster_zombie:'img/monster_zombie.png', 
-  monster_skeleton:'img/monster_skeleton.png',
-  monster_fallen:'img/monster_fallen.png', 
-  monster_demon:'img/monster_demon.png',
-  monster_ghoul:'img/monster_ghoul.png', 
-  monster_shadow:'img/monster_shadow.png',
-  monster_imp:'img/monster_imp.png',
-  monster_spider: 'img/monster_spider.png',
-  monster_snake: 'img/monster_snake.png',
-  monster_wolf: 'img/monster_wolf.png',
-  monster_boar:'img/monster_boar.png',
-  monster_default:'img/monster_default.png',
-  animal_cow:'img/animal_cow.png',
-  animal_deer: 'img/animal_deer.png',
-  animal_chicken:'img/animal_chicken.png',
-  animal_rabbit: 'img/animal_rabbit.png',
-  item_campfire:'img/item_campfire.png', 
-  item_torch:'img/item_torch.png', 
-  item_chest:'img/item_chest.png',
-  item_wood:'img/item_wood.png', 
-  item_stick:'img/item_stick.png', 
-  item_resin:'img/item_resin.png',
-  item_rock:'img/item_rock.png', 
-  item_flint:'img/item_flint.png',
-  item_iron_ore:'img/item_iron_ore.png', 
-  item_gold_nugget:'img/item_gold_nugget.png',
-  item_cactus:'img/item_cactus.png', 
-  item_water:'img/item_water.png',
-  item_bone:'img/item_bone.png', 
-  item_rotten_flesh:'img/item_rotten_flesh.png',
-  item_bow:'img/item_bow.png', 
-  item_fang:'img/item_fang.png', 
-  item_leather:'img/item_leather.png',
-  item_demon_heart:'img/item_demon_heart.png', 
-  item_ash:'img/item_ash.png',
-  item_potion:'img/item_potion.png', 
-  item_dark_dust:'img/item_dark_dust.png',
-  item_soul:'img/item_soul.png', 
-  item_imp_horn:'img/item_imp_horn.png', 
-  item_sulfur:'img/item_sulfur.png',
-  item_wolf_pelt:'img/item_wolf_pelt.png', 
-  item_boar_pelt:'img/item_boar_pelt.png',
-  item_meat:'img/item_meat.png', 
-  item_venison:'img/item_venison.png',
-  item_rabbit_meat:'img/item_rabbit_meat.png', 
-  item_egg:'img/item_egg.png',
-  item_cooked_meat:'img/item_cooked_meat.png',
-  item_cooked_venison:'img/item_cooked_venison.png',
-  item_cooked_rabbit:'img/item_cooked_rabbit.png',
-  item_snowball:'img/item_snowball.png',
-  item_ice:'img/item_ice.png',
-  item_wheat:'img/item_wheat.png',
-  item_seeds:'img/item_seeds.png',
-  item_fiber:'img/item_fiber.png'
 };
 
 let openCampfire = null; // открытый костёр
@@ -520,7 +423,7 @@ slot.addEventListener('click', function(e) {
 let textures = {};
 function loadTextures() {
   let promises = [];
-  for (let [key, path] of Object.entries(TEXTURE_PATHS)) {
+  for (let [key, path] of Object.entries(ALL_TEXTURES)) {
     promises.push(new Promise(function(resolve) {
       let img = new Image();
       img.onload = function() { textures[key] = img; resolve(); };
@@ -653,7 +556,7 @@ function addLog(m) {
 // Игрок
 let player = {
   rx: 0, ry: 0, tx: 0, ty: 0,
-  hp: 100, maxHp: 100, damage: 15, attackRange: 1.5,
+  hp: 100, maxHp: 100, damage: 5, attackRange: 1.5,
   attackCooldown: 0, attackCooldownTime: 300,
   lastMoveTime: 0, moveDelay: 100, moving: false,
   level: 1, xp: 0, xpToNext: 50, pendingLevelUps: 0,
@@ -767,12 +670,11 @@ function useSelectedItem() {
     updateInventoryUI(); return;
   }
   
-  if (item.name === '🔥 Костёр') { if(placeItem('campfire','#ff6600',4)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
-  if (item.name === '🕯️ Факел') { if(placeItem('torch','#ffaa00',2)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
-  if (item.name === '📦 Сундук') { if(placeItem('chest','#8B4513',0)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
-  if (item.name === '⛺ Палатка') { if(placeItem('tent','#a08860',0)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
+  if (item.name === (ALL_ITEMS['item_campfire'] ? ALL_ITEMS['item_campfire'].name : '🔥 Костёр')) { if(placeItem('campfire','#ff6600',4)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
+  if (item.name === (ALL_ITEMS['item_torch'] ? ALL_ITEMS['item_torch'].name : '🕯️ Факел')) { if(placeItem('torch','#ffaa00',2)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
+  if (item.name === (ALL_ITEMS['item_chest'] ? ALL_ITEMS['item_chest'].name : '📦 Сундук')) { if(placeItem('chest','#8B4513',0)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
+  if (item.name === (ALL_ITEMS['item_tent'] ? ALL_ITEMS['item_tent'].name : '⛺ Палатка')) { if(placeItem('tent','#a08860',0)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
   
-  // Взять в руку
   player.heldItem = { slot: selectedSlot, item: item };
   addLog('✋ Взято: ' + item.name + ' (кликни куда положить)');
 }
@@ -937,7 +839,7 @@ function getEntitiesAt(tx, ty, chunk) {
       let minC = res.minChance || 0;
       let maxC = res.chance;
       if (h >= minC && h < maxC) {
-        let rt = RESOURCE_TYPES[res.type];
+        let rt = ALL_RESOURCES[res.type];
         if (rt) {
           entities.push(createEntity({
             type: 'resource', resourceKey: res.type,
@@ -961,20 +863,23 @@ function getEntitiesAt(tx, ty, chunk) {
     }
   }
   
-  // Все мобы (и мирные, и враги) из одного объекта
+  // Все мобы
   let mobKeys = Object.keys(ALL_MOBS);
   let suitable = [];
   for (let k = 0; k < mobKeys.length; k++) {
     let key = mobKeys[k];
     let mob = ALL_MOBS[key];
     
-    // Проверка биома
-    if (mob.biomes.indexOf(tile.biome) === -1) continue;
+    // Данные спавна для этого биома
+    let spawnData = mob.spawn ? mob.spawn.find(s => s.biome === tile.biome) : null;
+    if (!spawnData) continue;
     
-    // Проверка времени спавна
-    if (mob.spawnTime !== 'any' && mob.spawnTime !== tod) continue;
+    // Время спавна
+    let spawnTime = spawnData.spawnTime || 'any';
+    if (spawnTime !== 'any' && spawnTime !== tod) continue;
     
     // Лимит на чанк
+    let maxPerChunk = spawnData.maxPerChunk || 1;
     let count = 0;
     if (chunk) {
       for (let i = 0; i < chunk.entities.length; i++) {
@@ -982,16 +887,16 @@ function getEntitiesAt(tx, ty, chunk) {
         if ((e.type === 'monster' || e.type === 'peaceful') && e.mobKey === key && e.hp > 0) count++;
       }
     }
-    if (count >= (mob.maxPerChunk || 1)) continue;
+    if (count >= maxPerChunk) continue;
     
     // Особые условия
     if (key === 'imp' && Math.random() > 0.3) continue;
     if (key === 'spider' && tod === 'day' && Math.random() > 0.3) continue;
     
     // Шанс спавна
-    let chance = mob.spawnChance || 0.01;
+    let chance = spawnData.chance;
     if (mob.type === 'peaceful' && tod === 'night') chance /= 3;
-    if (mob.type === 'hostile' && nearFire) continue; // враждебные не спавнятся у костра
+    if (mob.type === 'hostile' && nearFire) continue;
     if (Math.random() >= chance) continue;
     
     suitable.push(key);
@@ -1016,13 +921,11 @@ function getEntitiesAt(tx, ty, chunk) {
       color: mob.color,
       burnsInDay: mob.burnsInDay || false,
       neutral: mob.type === 'neutral',
-      _isAggressive: mob.type === 'neutral' && Math.random() < (mob.aggroChance || 0),
+      _isAggressive: Math.random() < (mob.aggroChance || 0),
+      huntTargets: mob.huntTargets || null,
+      fleeFrom: mob.fleeFrom || null,
       xpReward: mob.xpReward || 2,
       drops: mob.drops || [],
-      dropName: mob.dropName || null,
-      dropEmoji: mob.dropEmoji || null,
-      dropTexKey: mob.dropTexKey || null,
-      dropHeal: mob.dropHeal || 0,
       fleeTimer: 0,
       ai: { state:'idle', wanderTarget:null, idleTimer:1000+Math.random()*3000, moveTimer:0, moveCooldown:0, forgetTimer:0 }
     }));
@@ -1156,7 +1059,7 @@ function canMoveTo(tx, ty, self) {
   for (let i = 0; i < all.length; i++) {
     let e = all[i];
     if (e === self) continue;
-    if (e.tx === tx && e.ty === ty && e.hp > 0 && e.type !== 'campfire' && e.type !== 'chest' && e.type !== 'dropped_item') return false;
+    if (e.tx === tx && e.ty === ty && e.hp > 0 && e.type !== 'campfire' && e.type !== 'chest' && e.type !== 'dropped_item' && e.type !== 'resource') return false;
   }
   if (player.tx === tx && player.ty === ty) return false;
   return true;
@@ -1175,18 +1078,36 @@ function updateAI(e, dt, isPeaceful) {
     else { e.rx += (ddx / dist) * speed; e.ry += (ddy / dist) * speed; }
   }
   
+  // Убегание при низком HP для animal
+  if (!e.fleeTimer && e.category === 'animal') {
+    let hpPercent = e.hp / (e.maxHp || e.hp);
+    if ((e.type === 'peaceful' && e._wasAttacked) || hpPercent < 0.2) {
+      e.fleeTimer = 3000;
+      let attacker = e._lastAttacker || { tx: player.tx, ty: player.ty };
+      e._fleeFrom = { tx: attacker.tx, ty: attacker.ty };
+      ai.state = 'flee';
+    }
+  }
+  
   // Проверка fleeFrom — для ВСЕХ
   if (!e.fleeTimer && e.fleeFrom) {
-    let allEnts = getVisibleEntities();
-    for (let j = 0; j < allEnts.length; j++) {
-      let other = allEnts[j];
-      if (other.hp > 0 && other.mobKey && e.fleeFrom.indexOf(other.mobKey) !== -1) {
-        let distToThreat = Math.sqrt((e.tx - other.tx) ** 2 + (e.ty - other.ty) ** 2);
-        if (distToThreat < 5) {
-          e.fleeTimer = 2000;
-          e._fleeFrom = { tx: other.tx, ty: other.ty };
-          ai.state = 'flee';
-          break;
+    // Проверка игрока
+    if (e.fleeFrom.indexOf('player') !== -1 && distToPlayer < 5 && player.hp > 0) {
+      e.fleeTimer = 2000;
+      e._fleeFrom = { tx: player.tx, ty: player.ty };
+      ai.state = 'flee';
+    } else {
+      let allEnts = getVisibleEntities();
+      for (let j = 0; j < allEnts.length; j++) {
+        let other = allEnts[j];
+        if (other.hp > 0 && other.mobKey && e.fleeFrom.indexOf(other.mobKey) !== -1) {
+          let distToThreat = Math.sqrt((e.tx - other.tx) ** 2 + (e.ty - other.ty) ** 2);
+          if (distToThreat < 5) {
+            e.fleeTimer = 2000;
+            e._fleeFrom = { tx: other.tx, ty: other.ty };
+            ai.state = 'flee';
+            break;
+          }
         }
       }
     }
@@ -1250,6 +1171,18 @@ function updateAI(e, dt, isPeaceful) {
     }
   }
   
+  // Преследование обидчика (для нейтралов)
+  if (!shouldChase && e._wasAttacked && e._lastAttacker) {
+    let attacker = e._lastAttacker;
+    if (attacker.hp > 0) {
+      let distToAttacker = Math.sqrt((e.tx - attacker.tx) ** 2 + (e.ty - attacker.ty) ** 2);
+      if (distToAttacker <= e.chaseRange) {
+        shouldChase = true;
+        ai._hunting = attacker;
+      }
+    }
+  }
+  
   // Преследование игрока
   if (!shouldChase) {
     if (isAggressive) {
@@ -1269,7 +1202,7 @@ function updateAI(e, dt, isPeaceful) {
     ai.forgetTimer -= dt;
     if (ai.forgetTimer <= 0 || (target === player && player.hp <= 0) || (ai._hunting && ai._hunting.hp <= 0)) {
       ai.state = 'idle'; ai.idleTimer = 1000 + Math.random() * 2000;
-      e._wasAttacked = false; ai._hunting = null;
+      e._wasAttacked = false; e._lastAttacker = null; ai._hunting = null;
     } else {
       ai.moveCooldown -= dt;
       if (ai.moveCooldown <= 0 && distToTarget > e.attackRange && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
@@ -1282,6 +1215,8 @@ function updateAI(e, dt, isPeaceful) {
         if (ai._hunting) {
           ai._hunting.hp -= e.damage;
           ai._hunting.fleeTimer = 2000;
+          ai._hunting._wasAttacked = true;
+          ai._hunting._lastAttacker = e;
           e.attackCooldown = e.attackCooldownTime;
           if (ai._hunting.hp <= 0) {
             ai._hunting.hp = -1;
@@ -1322,6 +1257,21 @@ function attackEntity(target) {
   player.attackCooldown = player.attackCooldownTime;
   target._lastHitByPlayer = true;
   
+  // Дроп с сущности
+  function processDrops(drops, tx, ty) {
+    if (!drops) return;
+    for (let d = 0; d < drops.length; d++) {
+      let itemData = ALL_ITEMS[drops[d].itemKey];
+      if (!itemData) continue;
+      let cnt = drops[d].count || 1;
+      for (let c = 0; c < cnt; c++) {
+        if (Math.random() < drops[d].chance) {
+          addToInventoryOrDrop({ name: itemData.name, emoji: itemData.emoji, texKey: itemData.texKey, count: 1 }, tx, ty);
+        }
+      }
+    }
+  }
+  
   if (target.type === 'resource') {
     if ((target.resourceKey === 'tree' || target.resourceKey === 'pine') && Math.random() < 0.15) {
       let spiderMob = ALL_MOBS['spider'];
@@ -1347,9 +1297,11 @@ function attackEntity(target) {
       target.fallAngle = (Math.random() - 0.5) * 1.2;
       target.fallDirection = Math.random() > 0.5 ? 1 : -1;
       addLog('💥 ' + target.name + ' сломан!');
-      if (target.drops) for (let d = 0; d < target.drops.length; d++) if (Math.random() < target.drops[d].chance) { let cnt = target.drops[d].count || 1; for (let c = 0; c < cnt; c++) addToInventoryOrDrop({ name: target.drops[d].name, emoji: target.drops[d].emoji, texKey: target.drops[d].texKey, count: 1 }, target.tx, target.ty); } }
+      processDrops(target.drops, target.tx, target.ty);
+    }
     return;
   }
+  
   if (target.type === 'peaceful') {
     target.fleeTimer = 3000; addLog('⚔️ Ты ударил ' + target.name + '!');
     if (target.hp <= 0) { 
@@ -1357,12 +1309,20 @@ function attackEntity(target) {
       target.deathTime = Date.now(); 
       target.fallAngle = (Math.random() - 0.5) * 1.0;
       target.fallDirection = Math.random() > 0.5 ? 1 : -1;
-      player.hp = Math.min(player.maxHp, player.hp + target.dropHeal); 
+      // Хил от первого дропа
+      if (target.drops && target.drops.length > 0) {
+        let itemData = ALL_ITEMS[target.drops[0].itemKey];
+        if (itemData && itemData.heal) {
+          player.hp = Math.min(player.maxHp, player.hp + itemData.heal);
+        }
+      }
       addXp(target.xpReward || 2); 
-      addLog('🍖 ' + target.name + ' убит! +' + target.dropHeal + ' HP'); 
-      addToInventoryOrDrop({ name: target.dropName, emoji: target.dropEmoji, texKey: target.dropTexKey, count: 1 }, target.tx, target.ty); }
+      addLog('🍖 ' + target.name + ' убит!');
+      processDrops(target.drops, target.tx, target.ty);
+    }
     return;
   }
+  
   if (target.neutral) target._wasAttacked = true;
   addLog('⚔️ Ты ударил ' + target.name + ' на ' + player.damage + ' урона!');
   if (target.hp <= 0) { 
@@ -1372,8 +1332,9 @@ function attackEntity(target) {
     target.fallDirection = Math.random() > 0.5 ? 1 : -1;
     addXp(target.xpReward || 5); 
     addLog('💀 ' + target.name + ' убит!');
-    if (target.drops) for (let d = 0; d < target.drops.length; d++) if (Math.random() < target.drops[d].chance) addToInventoryOrDrop({ name: target.drops[d].name, emoji: target.drops[d].emoji, texKey: target.drops[d].texKey, count: 1 }, target.tx, target.ty);
-    return; }
+    processDrops(target.drops, target.tx, target.ty);
+    return;
+  }
   if (target.ai) { target.ai.state = 'chase'; target.ai.forgetTimer = 5000; }
   if (dist <= target.attackRange && target.attackCooldown <= 100) {
     setTimeout(function() { if (target.hp > 0 && player.hp > 0) { player.hp -= target.damage; player.attackCooldown = 400; addLog('💥 ' + target.name + ' бьёт в ответ! -' + target.damage + ' HP'); if (player.hp <= 0) { player.hp = 0; addLog('☠️ ТЫ ПОГИБ...'); document.getElementById('death-screen').classList.add('active'); } } }, 250);
@@ -1405,25 +1366,61 @@ function pickupDroppedItem(bag) {
 function updateCraftMenu() {
   let listEl = document.getElementById('craft-list');
   listEl.innerHTML = '';
-  let keys = Object.keys(RECIPES);
+  let keys = Object.keys(ALL_RECIPES);
   if (keys.length === 0) { listEl.innerHTML = '<p style="color:#888;text-align:center;">Нет рецептов</p>'; return; }
   for (let i = 0; i < keys.length; i++) {
-    let recipe = RECIPES[keys[i]], canCraft = true, ingTexts = [];
-    for (let j = 0; j < recipe.ingredients.length; j++) { let ing = recipe.ingredients[j]; let has = countItemInInventory(ing.name); if (has < ing.count) canCraft = false; let icon = ing.emoji; if (ing.texKey && getTex(ing.texKey)) icon = '<img src="' + getTex(ing.texKey).src + '" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;">'; ingTexts.push((has >= ing.count ? '✅' : '❌') + ' ' + icon + ' ' + ing.name + ' <b>' + has + '</b>/' + ing.count); }
+    let recipe = ALL_RECIPES[keys[i]], canCraft = true, ingTexts = [];
+    let resultItem = ALL_ITEMS[recipe.result.itemKey];
+    if (!resultItem) continue;
+    
+    for (let j = 0; j < recipe.ingredients.length; j++) {
+      let ing = recipe.ingredients[j];
+      let ingItem = ALL_ITEMS[ing.itemKey];
+      if (!ingItem) continue;
+      let has = countItemInInventory(ingItem.name);
+      if (has < ing.count) canCraft = false;
+      let icon = ingItem.emoji;
+      if (ingItem.texKey && getTex(ingItem.texKey)) icon = '<img src="' + getTex(ingItem.texKey).src + '" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;">';
+      ingTexts.push((has >= ing.count ? '✅' : '❌') + ' ' + icon + ' ' + ingItem.name + ' <b>' + has + '</b>/' + ing.count);
+    }
     let div = document.createElement('div'); div.className = 'craft-item ' + (canCraft ? 'can-craft' : 'cannot-craft');
-    let iconHtml = recipe.emoji; if (recipe.texKey && getTex(recipe.texKey)) iconHtml = '<img src="' + getTex(recipe.texKey).src + '" style="width:32px;height:32px;object-fit:contain;">';
-    div.innerHTML = '<div class="craft-item-icon">' + iconHtml + '</div><div class="craft-item-info"><div class="craft-item-name">' + recipe.name + '</div><div class="craft-item-ingredients">' + ingTexts.join(' | ') + '</div></div><button class="craft-item-btn" ' + (canCraft ? '' : 'disabled') + '>Создать</button>';
+    let iconHtml = resultItem.emoji;
+    if (resultItem.texKey && getTex(resultItem.texKey)) iconHtml = '<img src="' + getTex(resultItem.texKey).src + '" style="width:32px;height:32px;object-fit:contain;">';
+    div.innerHTML = '<div class="craft-item-icon">' + iconHtml + '</div><div class="craft-item-info"><div class="craft-item-name">' + resultItem.name + '</div><div class="craft-item-ingredients">' + ingTexts.join(' | ') + '</div></div><button class="craft-item-btn" ' + (canCraft ? '' : 'disabled') + '>Создать</button>';
     if (canCraft) { (function(rkey) { div.addEventListener('click', function(e) { if (e.target.tagName === 'BUTTON' || e.target === div || e.target.parentElement === div || e.target.parentElement.parentElement === div) { if (tryCraft(rkey)) updateCraftMenu(); } }); })(keys[i]); }
     listEl.appendChild(div);
   }
 }
 
 function tryCraft(recipeKey) {
-  let recipe = RECIPES[recipeKey]; if (!recipe) return false;
-  let needed = {}; for (let j = 0; j < recipe.ingredients.length; j++) { let ing = recipe.ingredients[j]; needed[ing.name] = (needed[ing.name] || 0) + ing.count; }
-  for (let name in needed) { if (countItemInInventory(name) < needed[name]) { addLog('❌ Не хватает: ' + name); return false; } }
-  for (let name in needed) { let toRemove = needed[name]; for (let i = 0; i < inventory.length && toRemove > 0; i++) { if (inventory[i] && inventory[i].name === name) { let take = Math.min(toRemove, inventory[i].count); inventory[i].count -= take; toRemove -= take; if (inventory[i].count <= 0) inventory[i] = null; } } }
-  let res = recipe.result; addToInventory({ name: res.name, emoji: res.emoji, texKey: res.texKey, count: res.count || 1 }); addLog('🔧 Создано: ' + recipe.name + '!'); updateInventoryUI(); return true;
+  let recipe = ALL_RECIPES[recipeKey]; if (!recipe) return false;
+  let needed = {};
+  for (let j = 0; j < recipe.ingredients.length; j++) {
+    let ing = recipe.ingredients[j];
+    let ingItem = ALL_ITEMS[ing.itemKey];
+    if (!ingItem) return false;
+    needed[ingItem.name] = (needed[ingItem.name] || 0) + ing.count;
+  }
+  for (let name in needed) {
+    if (countItemInInventory(name) < needed[name]) { addLog('❌ Не хватает: ' + name); return false; }
+  }
+  for (let name in needed) {
+    let toRemove = needed[name];
+    for (let i = 0; i < inventory.length && toRemove > 0; i++) {
+      if (inventory[i] && inventory[i].name === name) {
+        let take = Math.min(toRemove, inventory[i].count);
+        inventory[i].count -= take;
+        toRemove -= take;
+        if (inventory[i].count <= 0) inventory[i] = null;
+      }
+    }
+  }
+  let resultItem = ALL_ITEMS[recipe.result.itemKey];
+  if (!resultItem) return false;
+  addToInventory({ name: resultItem.name, emoji: resultItem.emoji, texKey: resultItem.texKey, count: recipe.result.count || 1 });
+  addLog('🔧 Создано: ' + resultItem.name + '!');
+  updateInventoryUI();
+  return true;
 }
 
 function toggleCraftMenu() {
@@ -2033,16 +2030,16 @@ function render(){
 // Управление
 let keys={};
 window.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){
+  if(e.code==='Escape'){
     if(openChest){closeChestUI();e.preventDefault();return;}
     if(openCampfire){closeCampfireUI();e.preventDefault();return;}
     let cp=document.getElementById('craft-panel');if(cp&&cp.style.display==='flex'){cp.style.display='none';paused=false;document.getElementById('pause-menu').classList.remove('active');}else togglePause();
     e.preventDefault();return;
   }
   if(paused||openChest)return;
-  if(e.key.toLowerCase()==='c'){toggleCraftMenu();e.preventDefault();return;}
-  if(e.key.toLowerCase()==='e'){useSelectedItem();e.preventDefault();return;}
-  if(e.key.toLowerCase()==='q'){
+  if(e.code==='KeyC'){toggleCraftMenu();e.preventDefault();return;}
+  if(e.code==='KeyE'){useSelectedItem();e.preventDefault();return;}
+  if(e.code==='KeyQ'){
   let item = inventory[selectedSlot];
   if(item){
     dropItemOnGround({name:item.name, emoji:item.emoji, texKey:item.texKey, count:item.count}, player.tx, player.ty);
@@ -2053,7 +2050,7 @@ window.addEventListener('keydown',function(e){
   e.preventDefault();
   return;
 }
-if(e.key.toLowerCase()==='h'){
+if(e.code==='KeyH'){
   let info = document.getElementById('info');
   if(info.style.display === 'none' || info.style.display === '') {
     info.style.display = 'block';
@@ -2075,7 +2072,7 @@ if(e.key.toLowerCase()==='h'){
   }
   return;
 }
-  if(e.key.toLowerCase()==='r'&&player.hp<=0){player.hp=player.maxHp;player.attackCooldown=0;document.getElementById('death-screen').classList.remove('active');addLog('🔄 Возрождение!');}
+  if(e.code==='KeyR'&&player.hp<=0){player.hp=player.maxHp;player.attackCooldown=0;document.getElementById('death-screen').classList.remove('active');addLog('🔄 Возрождение!');}
   e.preventDefault();
 });
 window.addEventListener('keyup',function(e){keys[e.key.toLowerCase()]=false;keys[e.key]=false;e.preventDefault();});

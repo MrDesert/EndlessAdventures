@@ -98,5 +98,95 @@
     "name": "Ядовитый клык",
     "emoji": "🦷",
     "texKey": "item_venom_fang"
+  },
+  "item_wood": {
+    "name": "Древесина",
+    "emoji": "🪵",
+    "texKey": "item_wood"
+  },
+  "item_stick": {
+    "name": "Палка",
+    "emoji": "🥢",
+    "texKey": "item_stick"
+  },
+  "item_resin": {
+    "name": "Смола",
+    "emoji": "🟤",
+    "texKey": "item_resin"
+  },
+  "item_rock": {
+    "name": "Булыжник",
+    "emoji": "🪨",
+    "texKey": "item_rock"
+  },
+  "item_flint": {
+    "name": "Кремень",
+    "emoji": "💎",
+    "texKey": "item_flint"
+  },
+  "item_iron_ore": {
+    "name": "Железная руда",
+    "emoji": "⛏️",
+    "texKey": "item_iron_ore"
+  },
+  "item_gold_nugget": {
+    "name": "Золотой самородок",
+    "emoji": "🌟",
+    "texKey": "item_gold_nugget"
+  },
+  "item_cactus": {
+    "name": "Кактус",
+    "emoji": "🌵",
+    "texKey": "item_cactus"
+  },
+  "item_water": {
+    "name": "Вода",
+    "emoji": "💧",
+    "texKey": "item_water"
+  },
+  "item_snowball": {
+    "name": "Снежок",
+    "emoji": "❄️",
+    "texKey": "item_snowball"
+  },
+  "item_ice": {
+    "name": "Лёд",
+    "emoji": "🧊",
+    "texKey": "item_ice"
+  },
+  "item_fiber": {
+    "name": "Волокно",
+    "emoji": "🧵",
+    "texKey": "item_fiber"
+  },
+  "item_wheat": {
+    "name": "Пшеница",
+    "emoji": "🌾",
+    "texKey": "item_wheat"
+  },
+  "item_seeds": {
+    "name": "Семена",
+    "emoji": "🌱",
+    "texKey": "item_seeds"
+  },
+    "item_campfire": {
+    "name": "🔥 Костёр",
+    "emoji": "🔥",
+    "texKey": "item_campfire"
+  },
+  "item_torch": {
+    "name": "🕯️ Факел",
+    "emoji": "🕯️",
+    "texKey": "item_torch"
+  },
+  "item_chest": {
+    "name": "📦 Сундук",
+    "emoji": "📦",
+    "texKey": "item_chest"
+  },
+  "item_tent": {
+    "name": "⛺ Палатка",
+    "emoji": "⛺",
+    "texKey": "item_tent"
   }
 }
