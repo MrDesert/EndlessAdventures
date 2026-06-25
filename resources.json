@@ -57,10 +57,22 @@
     ]
   },
   "wheat": {
-    "name": "🌾 Пшеница", "texKey": null, "hp": 5, "color": "#d4c47c", "h": 8,
+    "name": "🌾 Пшеница", 
+    "texKey": null, 
+    "hp": 5, 
+    "color": "#d4c47c", 
+    "h": 8,
     "drops": [
       {"itemKey": "item_wheat", "chance": 1.0, "count": 1},
       {"itemKey": "item_seeds", "chance": 0.5, "count": 1}
     ]
+  },
+  "cave_entrance": {
+    "name": "🕳️ Вход в пещеру",
+    "texKey": "cave_entrance",
+    "hp": 999,
+    "color": "#1a1a1a",
+    "h": 6,
+    "drops": []
   }
 }

@@ -97,7 +97,8 @@ const BIOMES = {
     colorBy: 'temperature',
     resources: {
       snow_tree: { chance: 0.22, type: 'snow_tree' },
-      ice_rock: { chance: 0.30, type: 'ice_rock', minChance: 0.22 }
+      ice_rock: { chance: 0.30, type: 'ice_rock', minChance: 0.22 },
+      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.004 }
     }
   },
   taiga: {
@@ -106,7 +107,8 @@ const BIOMES = {
     condition: function(t, h, w) { return t >= 0.25 && t < 0.38; },
     colorBy: 'temperature',
     resources: {
-      pine: { chance: 0.35, type: 'pine' }
+      pine: { chance: 0.35, type: 'pine' },
+      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.904 }
     }
   },
   sand: {
@@ -115,7 +117,8 @@ const BIOMES = {
     condition: function(t, h, w) { return t > 0.60 && h < 0.50; },
     colorBy: 'temperature',
     resources: {
-      cactus: { chance: 0.10, type: 'cactus' }
+      cactus: { chance: 0.10, type: 'cactus' },
+      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.904 }
     }
   },
   stone: {
@@ -124,7 +127,8 @@ const BIOMES = {
     condition: function(t, h, w) { return t > 0.68 || (t > 0.50 && h < 0.30); },
     resources: {
       stone: { chance: 0.14, type: 'stone' },
-      ore: { chance: 0.24, type: 'ore', minChance: 0.14 }
+      ore: { chance: 0.24, type: 'ore', minChance: 0.14 },
+      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.904 }
     }
   },
   mixed_forest: {
@@ -134,7 +138,8 @@ const BIOMES = {
     colorBy: 'both',
     resources: {
       tree: { chance: 0.18, type: 'tree' },
-      pine: { chance: 0.35, type: 'pine', minChance: 0.18 }
+      pine: { chance: 0.35, type: 'pine', minChance: 0.18 },
+      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.004 }
     }
   },
   forest: {
@@ -143,7 +148,8 @@ const BIOMES = {
     condition: function(t, h, w) { return h >= 0.65; },
     colorBy: 'humidity',
     resources: {
-      tree: { chance: 0.40, type: 'tree' }
+      tree: { chance: 0.40, type: 'tree' },
+      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.004 }
     }
   },
   grass: {
@@ -154,9 +160,19 @@ const BIOMES = {
     resources: {
       tree: { chance: 0.06, type: 'tree' },
       bush: { chance: 0.10, type: 'bush', minChance: 0.06 },
-      wheat: { chance: 0.14, type: 'wheat', minChance: 0.10 }
+      wheat: { chance: 0.14, type: 'wheat', minChance: 0.10 },
+      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.004 }
     }
+  },
+cave: {
+  name: '🕳️ Пещера', base: 3, color: '#3a3a2a', textureKey: 'tile_stone',
+  priority: 50, canBlend: false,
+  condition: function() { return false; },
+  resources: {
+    stone: { chance: 0.06, type: 'stone' },
+    ore: { chance: 0.10, type: 'ore', minChance: 0.06 }
   }
+}
 };
 
 // Загружаем JSON из файла
@@ -207,6 +223,69 @@ const COOKING_RECIPES = {
 
 let openCampfire = null; // открытый костёр
 
+let inCave = false;
+let caveChunks = {};
+let caveEntrancePos = null;
+let caveExitEntity = null;
+
+function enterCave(entrance) {
+  inCave = true;
+  caveEntrancePos = { tx: entrance.tx, ty: entrance.ty };
+  
+  player.tx = entrance.tx;
+  player.ty = entrance.ty;
+  player.rx = entrance.tx;
+  player.ry = entrance.ty;
+  
+  caveChunks = {};
+  
+  // Принудительно создаём чанк с проходимой клеткой для входа
+  let ck = Math.floor(player.tx/CHUNK_SIZE)+','+Math.floor(player.ty/CHUNK_SIZE);
+  caveChunks[ck] = { cx: Math.floor(player.tx/CHUNK_SIZE), cy: Math.floor(player.ty/CHUNK_SIZE), tiles: [], entities: [] };
+  // Добавляем проходимый тайл
+  caveChunks[ck].tiles.push({ tx: player.tx, ty: player.ty, base: 3, biome: 'cave' });
+  
+  // Создаём выход
+  caveChunks[ck].entities.push(createEntity({
+    type: 'cave_exit', tx: player.tx, ty: player.ty, name: '🕳️ Выход', hp: 999, maxHp: 999, h: 6, color: '#1a1a1a',
+    surfaceTx: entrance.tx, surfaceTy: entrance.ty
+  }));
+  
+  let pos = tileToScreen(player.tx, player.ty);
+  camX = canvas.width/2 - pos.x;
+  camY = canvas.height/2 - pos.y;
+  cachedObjects = null;
+  player.lastMoveTime = 0;
+  render();
+}
+function exitCave(targetExit) {
+  inCave = false;
+  player.tx = targetExit.tx;
+  player.ty = targetExit.ty;
+  player.rx = player.tx;
+  player.ry = player.ty;
+  caveEntrancePos = null;
+  caveChunks = {};
+  
+  let pos = tileToScreen(player.tx, player.ty);
+  camX = canvas.width/2 - pos.x;
+  camY = canvas.height/2 - pos.y;
+  cachedObjects = null;
+  player.lastMoveTime = 0; // ← ДОБАВЬ
+  render();
+}
+
+function getTileCave(tx, ty) {
+  let n1 = smoothNoise(tx * 0.2, ty * 0.2);
+  let n2 = smoothNoise(tx * 0.25 + 30, ty * 0.25 + 30);
+  let n3 = smoothNoise(tx * 0.35 - 20, ty * 0.35 + 20);
+  
+  // Узкие извилистые проходы
+  let isOpen = (n1 > 0.4 && n1 < 0.6) || (n2 > 0.42 && n2 < 0.58) || (n3 > 0.45 && n3 < 0.55);
+  
+  if (isOpen) return { base: 3, biome: 'cave' };
+  return { base: -1, biome: 'cave_wall' };
+}
 function openCampfireUI(entity) {
   openCampfire = entity;
   entity.cooking = entity.cooking || { input: null, output: null, progress: 0, time: 0 };
@@ -475,6 +554,8 @@ function adjustColor(hex, temperature, humidity, colorBy) {
 }
 
 function getTile(tx, ty) {
+  if (inCave) return getTileCave(tx, ty);
+  
   let temperature = smoothNoise(tx * 0.04 + 100, ty * 0.04 + 100);
   let humidity = smoothNoise(tx * 0.04 + 300, ty * 0.04 + 300);
   let waterNoise = smoothNoise(tx * 0.06 + 500, ty * 0.06 + 500);
@@ -809,12 +890,13 @@ let openChest = null;
 function createEntity(d) { d.rx = d.tx; d.ry = d.ty; return d; }
 
 function getVisibleEntities() {
+  let chunksRef = inCave ? caveChunks : chunks;
   let all = [], range = settings.renderDistance;
   let minTX = player.tx - range, maxTX = player.tx + range, minTY = player.ty - range, maxTY = player.ty + range;
   let minCX = Math.floor(minTX/CHUNK_SIZE), maxCX = Math.floor(maxTX/CHUNK_SIZE);
   let minCY = Math.floor(minTY/CHUNK_SIZE), maxCY = Math.floor(maxTY/CHUNK_SIZE);
   for (let cx = minCX; cx <= maxCX; cx++) for (let cy = minCY; cy <= maxCY; cy++) {
-    let chunk = chunks[cx+','+cy]; // НЕ вызываем ensureChunk!
+    let chunk = chunksRef[cx+','+cy];
     if (!chunk) continue;
     for (let i = 0; i < chunk.entities.length; i++) {
       let e = chunk.entities[i];
@@ -827,6 +909,7 @@ function getVisibleEntities() {
 function getEntitiesAt(tx, ty, chunk) {
   let tile = getTile(tx, ty), entities = [];
   if (tile.base === 1) return entities;
+  if (tile.base === -1) return entities; // стена пещеры — ничего
   
   let h = hash(tx*1000+123, ty*1000+456), h2 = hash(tx*777+999, ty*777+888), tod = getTimeOfDay();
   
@@ -839,13 +922,59 @@ function getEntitiesAt(tx, ty, chunk) {
       let minC = res.minChance || 0;
       let maxC = res.chance;
       if (h >= minC && h < maxC) {
-        let rt = ALL_RESOURCES[res.type];
-        if (rt) {
+        if (res.type === 'cave_entrance') {
           entities.push(createEntity({
-            type: 'resource', resourceKey: res.type,
-            tx, ty, texKey: rt.texKey, name: rt.name,
-            hp: rt.hp, maxHp: rt.hp, h: rt.h || 10, color: rt.color, drops: rt.drops
+            type: 'cave_entrance',
+            tx, ty, name: '🕳️ Вход в пещеру',
+            hp: 999, maxHp: 999, h: 6, color: '#1a1a1a'
           }));
+        } else {
+          let rt = ALL_RESOURCES[res.type];
+          if (rt) {
+            entities.push(createEntity({
+              type: 'resource', resourceKey: res.type,
+              tx, ty, texKey: rt.texKey, name: rt.name,
+              hp: rt.hp, maxHp: rt.hp, h: rt.h || 10, color: rt.color, drops: rt.drops
+            }));
+          }
+        }
+      }
+    }
+  }
+  
+  // Выходы из пещеры
+  if (inCave && caveEntrancePos) {
+    let checkBiomes = ['grass', 'forest', 'sand', 'stone', 'snow', 'taiga', 'mixed_forest'];
+    for (let b = 0; b < checkBiomes.length; b++) {
+      let bConf = BIOMES[checkBiomes[b]];
+      if (bConf && bConf.resources && bConf.resources.cave_entrance) {
+        let res = bConf.resources.cave_entrance;
+        if (h >= (res.minChance||0) && h < res.chance) {
+          if (tx !== caveEntrancePos.tx || ty !== caveEntrancePos.ty) {
+            let exists = entities.some(e => e.type === 'cave_exit' && e.tx === tx && e.ty === ty);
+            if (!exists) {
+              // Делаем клетку проходимой
+              if (chunk) {
+                let found = false;
+                for (let i = 0; i < chunk.tiles.length; i++) {
+                  if (chunk.tiles[i].tx === tx && chunk.tiles[i].ty === ty) {
+                    chunk.tiles[i].base = 3;
+                    chunk.tiles[i].biome = 'cave';
+                    found = true;
+                    break;
+                  }
+                }
+                if (!found) {
+                  chunk.tiles.push({ tx, ty, base: 3, biome: 'cave' });
+                }
+              }
+              entities.push(createEntity({
+                type: 'cave_exit', tx, ty, name: '🕳️ Выход', hp: 999, maxHp: 999, h: 6, color: '#1a1a1a',
+                surfaceTx: tx, surfaceTy: ty
+              }));
+            }
+          }
+          break;
         }
       }
     }
@@ -853,7 +982,7 @@ function getEntitiesAt(tx, ty, chunk) {
   
   // Проверка костров
   let nearFire = false;
-  if (tod === 'night') {
+  if (!inCave && tod === 'night') {
     let allEnts = getVisibleEntities();
     for (let i = 0; i < allEnts.length; i++) {
       let e = allEnts[i];
@@ -870,15 +999,12 @@ function getEntitiesAt(tx, ty, chunk) {
     let key = mobKeys[k];
     let mob = ALL_MOBS[key];
     
-    // Данные спавна для этого биома
     let spawnData = mob.spawn ? mob.spawn.find(s => s.biome === tile.biome) : null;
     if (!spawnData) continue;
     
-    // Время спавна
     let spawnTime = spawnData.spawnTime || 'any';
     if (spawnTime !== 'any' && spawnTime !== tod) continue;
     
-    // Лимит на чанк
     let maxPerChunk = spawnData.maxPerChunk || 1;
     let count = 0;
     if (chunk) {
@@ -889,11 +1015,9 @@ function getEntitiesAt(tx, ty, chunk) {
     }
     if (count >= maxPerChunk) continue;
     
-    // Особые условия
     if (key === 'imp' && Math.random() > 0.3) continue;
     if (key === 'spider' && tod === 'day' && Math.random() > 0.3) continue;
     
-    // Шанс спавна
     let chance = spawnData.chance;
     if (mob.type === 'peaceful' && tod === 'night') chance /= 3;
     if (mob.type === 'hostile' && nearFire) continue;
@@ -935,14 +1059,24 @@ function getEntitiesAt(tx, ty, chunk) {
 }
 
 function ensureChunk(cx, cy) {
-  let key = cx+','+cy; if(chunks[key]) return chunks[key];
+  let key = cx+','+cy;
+  let chunksRef = inCave ? caveChunks : chunks;
+  if(chunksRef[key]) return chunksRef[key];
+  
   let sx=cx*CHUNK_SIZE, sy=cy*CHUNK_SIZE, tiles=[], entities=[];
-  let tmp = {cx,cy,tiles,entities}; chunks[key]=tmp;
+  let tmp = {cx,cy,tiles,entities};
+  chunksRef[key]=tmp;
+  
+  let getTileFunc = inCave ? getTileCave : getTile;
+  
   for(let dx=0;dx<CHUNK_SIZE;dx++)for(let dy=0;dy<CHUNK_SIZE;dy++){
-    let t=getTile(sx+dx,sy+dy);
+    let t=getTileFunc(sx+dx,sy+dy);
     tiles.push({ tx:sx+dx, ty:sy+dy, base:t.base, biome:t.biome, blend:t.blend });
   }
-  for(let dx=0;dx<CHUNK_SIZE;dx++)for(let dy=0;dy<CHUNK_SIZE;dy++){let ents=getEntitiesAt(sx+dx,sy+dy,tmp);for(let i=0;i<ents.length;i++)entities.push(ents[i]);}
+  for(let dx=0;dx<CHUNK_SIZE;dx++)for(let dy=0;dy<CHUNK_SIZE;dy++){
+    let ents=getEntitiesAt(sx+dx,sy+dy,tmp);
+    for(let i=0;i<ents.length;i++)entities.push(ents[i]);
+  }
   return tmp;
 }
 
@@ -1032,17 +1166,18 @@ function cleanupDead(){
 }
 
 function collectVisibleObjects(){
-  // Кэширование — обновляем только при движении или раз в 3 кадра
   if (cachedObjects && !player.moving && frameCount - cacheFrame < 3) {
     return cachedObjects;
   }
+  
+  let chunksRef = inCave ? caveChunks : chunks;
   
   let allTiles=[],allEntities=[];
   let range = settings.renderDistance;
   let minTX=player.tx-range,maxTX=player.tx+range,minTY=player.ty-range,maxTY=player.ty+range;
   let minCX=Math.floor(minTX/CHUNK_SIZE),maxCX=Math.floor(maxTX/CHUNK_SIZE),minCY=Math.floor(minTY/CHUNK_SIZE),maxCY=Math.floor(maxTY/CHUNK_SIZE);
   for(let cx=minCX;cx<=maxCX;cx++)for(let cy=minCY;cy<=maxCY;cy++){
-    ensureChunk(cx,cy);let chunk=chunks[cx+','+cy];if(!chunk)continue;
+    ensureChunk(cx,cy);let chunk=chunksRef[cx+','+cy];if(!chunk)continue;
     for(let i=0;i<chunk.tiles.length;i++){let t=chunk.tiles[i];if(t.tx>=minTX&&t.tx<=maxTX&&t.ty>=minTY&&t.ty<=maxTY)allTiles.push(t);}
     for(let i=0;i<chunk.entities.length;i++){let e=chunk.entities[i];if(e.tx>=minTX&&e.tx<=maxTX&&e.ty>=minTY&&e.ty<=maxTY)allEntities.push(e);}
   }
@@ -1055,6 +1190,7 @@ function collectVisibleObjects(){
 function canMoveTo(tx, ty, self) {
   let tile = getTile(tx, ty);
   if (tile.base === 1) return false;
+  if (inCave && tile.base === -1) return false; // стена пещеры
   let all = getVisibleEntities();
   for (let i = 0; i < all.length; i++) {
     let e = all[i];
@@ -1669,17 +1805,17 @@ function lighten(hex, f) { let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slic
 function drawTileCode(tx, ty, base){
     let pos=tileToScreen(tx,ty);
     
-    // Вычисляем температуру/влажность на ЭТОЙ клетке
-    let temperature = smoothNoise(tx * 0.04 + 100, ty * 0.04 + 100);
-    let humidity = smoothNoise(tx * 0.04 + 300, ty * 0.04 + 300);
-    
-    // Находим биом
-    let biomeConfig = Object.values(BIOMES).find(function(b){ return b.base === base; });
-    let color = biomeConfig ? biomeConfig.color : '#000';
-    
-    // Подкрашиваем если нужно
-    if (biomeConfig && biomeConfig.colorBy) {
-      color = adjustColor(color, temperature, humidity, biomeConfig.colorBy);
+    let color;
+    if (base === -1) {
+      color = '#0a0a0a';
+    } else {
+      let temperature = smoothNoise(tx * 0.04 + 100, ty * 0.04 + 100);
+      let humidity = smoothNoise(tx * 0.04 + 300, ty * 0.04 + 300);
+      let biomeConfig = Object.values(BIOMES).find(function(b){ return b.base === base; });
+      color = biomeConfig ? biomeConfig.color : '#000';
+      if (biomeConfig && biomeConfig.colorBy) {
+        color = adjustColor(color, temperature, humidity, biomeConfig.colorBy);
+      }
     }
     
     let hw=TILE_HW*zoom,hh=TILE_HH*zoom;
@@ -1790,6 +1926,30 @@ function drawEntityCode(e){
   
   ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(pos.x,pos.y+2*zoom,6*zoom,3*zoom,0,0,Math.PI*2);ctx.fill();
   if(e.type==='dropped_item'){ctx.fillStyle='#ffcc00';ctx.beginPath();ctx.arc(pos.x,topY+4*zoom,4*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('📦',pos.x,topY-1*zoom);if(e.items&&e.items.length>0){ctx.fillStyle='#fff';ctx.font=(6*zoom)+'px monospace';ctx.fillText(e.items.length+' предм.',pos.x,topY-9*zoom);}}
+  else if(e.type==='cave_entrance'){
+  ctx.fillStyle='#1a1a1a';
+  ctx.beginPath();
+  ctx.ellipse(pos.x, pos.y+4*zoom, 8*zoom, 4*zoom, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='#000';
+  ctx.beginPath();
+  ctx.ellipse(pos.x, pos.y+3*zoom, 5*zoom, 2.5*zoom, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='#fff';
+  ctx.font='bold '+(8*zoom)+'px monospace';
+  ctx.textAlign='center';
+  ctx.fillText('🕳️',pos.x,topY-3*zoom);
+}
+else if(e.type==='cave_exit'){
+  ctx.fillStyle='#1a1a1a';
+  ctx.beginPath();
+  ctx.ellipse(pos.x, pos.y+4*zoom, 8*zoom, 4*zoom, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='#ff0';
+  ctx.font='bold '+(8*zoom)+'px monospace';
+  ctx.textAlign='center';
+  ctx.fillText('🕳️',pos.x,topY-3*zoom);
+}
   else if(e.type==='chest'){ctx.fillStyle='#8B4513';ctx.fillRect(pos.x-7*zoom,topY,14*zoom,10*zoom);ctx.strokeStyle='#000';ctx.lineWidth=1.5;ctx.strokeRect(pos.x-7*zoom,topY,14*zoom,10*zoom);ctx.fillStyle='#A0522D';ctx.fillRect(pos.x-6*zoom,topY+2*zoom,12*zoom,3*zoom);ctx.fillStyle='#FFD700';ctx.fillRect(pos.x-2*zoom,topY+4*zoom,4*zoom,3*zoom);ctx.fillStyle='#fff';ctx.font='bold '+(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('📦',pos.x,topY-4*zoom);}
   else if(e.type==='tent'){
     ctx.fillStyle='#a08860';ctx.fillRect(pos.x-8*zoom,topY,16*zoom,12*zoom);
@@ -1976,7 +2136,7 @@ function render(){
   for(let i=0;i<allObjs.length;i++){let o=allObjs[i];if(o.type==='player')drawPlayerTex();else drawEntityTex(o);}
   
   // Ночь с вырезанием света от костров
-  let alpha=getNightAlpha();
+  let alpha = inCave ? 0.85 : getNightAlpha();
   if(alpha>0){
     ctx.save();
     
@@ -2060,6 +2220,21 @@ if(e.code==='KeyH'){
   e.preventDefault();
   return;
 }
+if(e.code==='Slash' || e.code==='KeyZ'){
+  e.preventDefault();
+  let consoleEl = document.getElementById('console');
+  let inputEl = document.getElementById('console-input');
+  if(consoleEl.style.display === 'none' || consoleEl.style.display === ''){
+    consoleEl.style.display = 'block';
+    inputEl.value = '';
+    inputEl.focus();
+    paused = true;
+  } else {
+    consoleEl.style.display = 'none';
+    paused = false;
+  }
+  return;
+}
   if(e.key>='1'&&e.key<='8'){selectedSlot=parseInt(e.key)-1;updateInventoryUI();e.preventDefault();return;}
   keys[e.key.toLowerCase()]=true;keys[e.key]=true;
   if(e.key==='F3'){
@@ -2101,6 +2276,34 @@ canvas.addEventListener('click',function(e){
     return;
   }
   
+  // Клик по входу в пещеру
+  for(let i=0;i<entities.length;i++){
+    let ent=entities[i];
+    if(ent.type==='cave_entrance'){
+      let pos=tileToScreen(ent.rx,ent.ry);
+      let dx=mx-pos.x,dy=my-pos.y,dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<25 && Math.abs(ent.tx-player.tx)+Math.abs(ent.ty-player.ty)<=1.5){
+        enterCave(ent);
+        addLog('🕳️ Вы вошли в пещеру!');
+        return;
+      }
+    }
+  }
+
+  // Клик по выходу из пещеры
+  for(let i=0;i<entities.length;i++){
+    let ent=entities[i];
+    if(ent.type==='cave_exit'){
+      let pos=tileToScreen(ent.rx,ent.ry);
+      let dx=mx-pos.x,dy=my-pos.y,dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<25 && Math.abs(ent.tx-player.tx)+Math.abs(ent.ty-player.ty)<=1.5){
+        exitCave({ tx: ent.surfaceTx || ent.tx, ty: ent.surfaceTy || ent.ty });
+        addLog('🕳️ Вы вышли из пещеры!');
+        return;
+      }
+    }
+  }
+
     // Клик по костру
   for(let i=0;i<entities.length;i++){
     let ent=entities[i];
@@ -2206,6 +2409,96 @@ canvas.addEventListener('contextmenu', function(e) {
 // Часть 5 (финал): UI, Цикл, Запуск
 // ══════════════════════════════════════════════
 
+function executeCommand(cmd) {
+  let output = document.getElementById('console-output');
+  let parts = cmd.split(' ');
+let command = parts[0].toLowerCase().replace('/', '');
+  
+  // /time day — установить день
+  if(command === 'time' && parts[1] === 'day'){
+    cycleTime = DAY_DURATION * 0.15; // 15% дня
+    addConsoleLine('☀️ Время установлено на день');
+  }
+  // /time night — установить ночь
+  else if(command === 'time' && parts[1] === 'night'){
+    cycleTime = DAY_DURATION + NIGHT_DURATION * 0.3; // 30% ночи
+    addConsoleLine('🌙 Время установлено на ночь');
+  }
+  // /time 300 — установить 300 сек от начала дня
+  else if(command === 'time' && !isNaN(parts[1])){
+    cycleTime = parseInt(parts[1]) * 1000;
+    addConsoleLine('⏰ Время установлено на ' + parts[1] + ' сек');
+  }
+  // /find cave_entrance — найти ближайшие входы в пещеру
+  else if(command === 'find'){
+    let type = parts[1];
+    let results = [];
+    let range = 100;
+    
+    for (let tx = player.tx - range; tx <= player.tx + range; tx++) {
+      for (let ty = player.ty - range; ty <= player.ty + range; ty++) {
+        let tile = getTile(tx, ty);
+        if (tile.base === 1) continue;
+        let biomeConfig = BIOMES[tile.biome];
+        if (!biomeConfig || !biomeConfig.resources) continue;
+        
+        // Проверяем ресурсы
+        if (biomeConfig.resources[type]) {
+          let res = biomeConfig.resources[type];
+          let h = hash(tx*1000+123, ty*1000+456);
+          if (h >= (res.minChance||0) && h < res.chance) {
+            let dist = Math.sqrt((tx - player.tx)**2 + (ty - player.ty)**2);
+            results.push({ name: type, tx, ty, dist });
+          }
+        }
+      }
+    }
+    
+    results.sort((a, b) => a.dist - b.dist);
+    let closest = results.slice(0, 5);
+    if (closest.length === 0) {
+      addConsoleLine('❌ Ничего не найдено: ' + type + ' в радиусе ' + range);
+    } else {
+      addConsoleLine('🔍 Найдено (' + type + '): ' + results.length + ' шт.');
+      for (let r of closest) {
+        addConsoleLine('  ' + r.name + ' на (' + r.tx + ', ' + r.ty + ') дист: ' + Math.floor(r.dist));
+      }
+    }
+  }
+  // /tp 10 20 — телепорт
+  else if(command === 'tp' && !isNaN(parts[1]) && !isNaN(parts[2])){
+    let tx = parseInt(parts[1]);
+    let ty = parseInt(parts[2]);
+    player.tx = tx; player.ty = ty;
+    player.rx = tx; player.ry = ty;
+    let pos = tileToScreen(tx, ty);
+    camX = canvas.width/2 - pos.x;
+    camY = canvas.height/2 - pos.y;
+    cachedObjects = null;
+    addConsoleLine('📍 Телепорт на (' + tx + ', ' + ty + ')');
+  }
+  // /god — бессмертие
+  else if(command === 'god'){
+    player.godMode = !player.godMode;
+    addConsoleLine(player.godMode ? '👼 Бессмертие ВКЛ' : '👼 Бессмертие ВЫКЛ');
+  }
+  // /help
+  else if(command === 'help'){
+    addConsoleLine('/time day|night|сек — установить время');
+    addConsoleLine('/find тип — найти объекты');
+    addConsoleLine('/tp x y — телепорт');
+    addConsoleLine('/god — бессмертие');
+  }
+  else {
+    addConsoleLine('❌ Неизвестная команда: ' + command + ' (/help)');
+  }
+}
+
+function addConsoleLine(text){
+  let output = document.getElementById('console-output');
+  output.innerHTML += '<div>' + text + '</div>';
+  output.scrollTop = output.scrollHeight;
+}
 function handleInput(now){
   if(paused||player.hp<=0||openChest)return;
   if(Math.abs(player.rx-player.tx)>0.01||Math.abs(player.ry-player.ty)>0.01){
@@ -2225,10 +2518,10 @@ function handleInput(now){
   if(keys['a']||keys['ф']||keys['arrowleft'])nx--;
   if(keys['d']||keys['в']||keys['arrowright'])nx++;
   if(nx!==player.tx||ny!==player.ty){
-    if(getTile(nx,ny).base===1)return;
+    let tile = getTile(nx,ny);
+    if(tile.base===1)return;
+    if(inCave && tile.base===-1)return;
     player.tx=nx;player.ty=ny;player.lastMoveTime=now;
-    
-    // Удаляем дальние чанки при каждом шаге
     unloadFarChunks();
   }
 }
@@ -2614,6 +2907,22 @@ async function startGame() {
     requestAnimationFrame(gameLoop);
     addLog('🎮 Готово!');
     updateInventoryUI();
+  });
+}
+let consoleInput = document.getElementById('console-input');
+if (consoleInput) {
+  consoleInput.addEventListener('keydown', function(e) {
+    if(e.code === 'Enter'){
+      let cmd = this.value.trim();
+      this.value = '';
+      executeCommand(cmd);
+      e.preventDefault();
+    }
+    if(e.code === 'Escape'){
+      document.getElementById('console').style.display = 'none';
+      paused = false;
+      e.preventDefault();
+    }
   });
 }
 startGame();

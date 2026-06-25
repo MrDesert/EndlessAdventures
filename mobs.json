@@ -139,17 +139,19 @@
     "chaseRange": 5, 
     "attackRange": 3, 
     "attackCD": 500,
-    "spawnTime": "night", 
-    "biomes": ["stone","sand"], 
-    "maxPerChunk": 1,
     "color": "#ff8800", 
-    "burnsInDay": true, 
+    "burnsInDay": false, 
     "xpReward": 18,
     "drops": [
         {"texKey": "item_imp_horn", "chance": 0.5},
         {"texKey": "item_sulfur", "chance": 0.4}
     ],
-    "spawnChance": 0.004
+    "spawnChance": 0.004,
+    "spawn": [
+        {"biome": "stone", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "night"},
+        {"biome": "sand", "chance": 0.005, "maxPerChunk": 1, "spawnTime": "night"},
+        {"biome": "cave", "chance": 0.008, "maxPerChunk": 1, "spawnTime": "any"}
+    ]
 },
 "wolf": {
     "name": "Волк", 
