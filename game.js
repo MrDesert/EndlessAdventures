@@ -1,7 +1,3 @@
-// ══════════════════════════════════════════════
-// game.js — v2.1: Дроп на землю + Drag&Drop сундук
-// ══════════════════════════════════════════════
-
 // Настройки
 let settings = {
   renderDistance: 16,    // 8, 12, 16, 24
@@ -197,30 +193,6 @@ async function loadJSON(){
     Object.assign(ALL_RECIPES, recipes);
 }
 
-// Съедобное
-const EDIBLE_ITEMS = {
-  '🥩 Мясо': 7,        // сырое — 7 HP (было 20)
-  '🍖 Оленина': 5,     // сырое — 5 HP (было 15)
-  '🍗 Крольчатина': 3, // сырое — 3 HP (было 8)
-  '🍳 Яйцо': 5,
-  '🥩': 7,
-  '🍖': 5,
-  '🍗': 3,
-  '🍳': 5,
-  // Жареное — в 3 раза лучше
-  '🥩 Жареное мясо': 20,
-  '🍖 Жареная оленина': 15,
-  '🍗 Жареная крольчатина': 8,
-  '🍳 Жареное яйцо': 12
-};
-
-const COOKING_RECIPES = {
-  '🥩 Мясо': { result: '🥩 Жареное мясо', emoji: '🥩', time: 10000 },
-  '🍖 Оленина': { result: '🍖 Жареная оленина', emoji: '🍖', time: 10000 },
-  '🍗 Крольчатина': { result: '🍗 Жареная крольчатина', emoji: '🍗', time: 8000 },
-  '🍳 Яйцо': { result: '🍳 Жареное яйцо', emoji: '🍳', time: 5000 }
-};
-
 let openCampfire = null; // открытый костёр
 
 let inCave = false;
@@ -289,6 +261,9 @@ function getTileCave(tx, ty) {
 function openCampfireUI(entity) {
   openCampfire = entity;
   entity.cooking = entity.cooking || { input: null, output: null, progress: 0, time: 0 };
+  entity.fuel = entity.fuel || [];
+  entity.fuelTime = entity.fuelTime || 0;
+  entity.fuelMax = 60000;
   
   let invEl = document.getElementById('inventory');
   if (invEl) invEl.style.display = 'none';
@@ -311,6 +286,14 @@ function openCampfireUI(entity) {
         '</div>' +
         '<div style="font-size:24px;">→</div>' +
         '<div><p style="font-size:12px;color:#aaa;">Готовое</p><div id="cook-output" style="width:50px;height:50px;background:rgba(255,255,255,0.1);border:2px solid #888;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;"></div></div>' +
+      '</div>' +
+      '<div style="margin-top:10px;border-top:1px solid #555;padding-top:10px;">' +
+        '<p style="font-size:12px;color:#aaa;">🪵 Топливо</p>' +
+        '<div id="cook-fuel" style="width:50px;height:50px;background:rgba(255,255,255,0.1);border:2px solid #8B4513;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto;"></div>' +
+        '<div id="cook-fuel-bar" style="width:100px;height:8px;background:#333;border-radius:4px;margin:5px auto;overflow:hidden;">' +
+          '<div id="cook-fuel-fill" style="height:100%;background:#ff6600;width:0%;"></div>' +
+        '</div>' +
+        '<div style="font-size:10px;color:#aaa;" id="cook-fuel-text">0 сек</div>' +
       '</div>' +
       '<div style="border-top:2px solid #555;margin-top:15px;padding-top:15px;">' +
         '<p style="color:#ccc;margin:0 0 10px 0;font-size:14px;">🎒 Твой инвентарь</p>' +
@@ -341,84 +324,130 @@ function closeCampfireUI() {
 function updateCampfireUI() {
   if (!openCampfire) return;
   let cook = openCampfire.cooking;
+  let campfire = openCampfire;
   
   // Входной слот
   let inputEl = document.getElementById('cook-input');
   if (inputEl) {
-if (cook.input) {
-  inputEl.innerHTML = cook.input.emoji + '<span style="position:absolute;bottom:2px;right:4px;font-size:9px;color:#fff;text-shadow:0 0 2px #000;">' + cook.input.count + '</span>';
-  inputEl.style.position = 'relative';
-  inputEl.title = cook.input.name + ' x' + cook.input.count;
-} else {
-  inputEl.innerHTML = '';
-  inputEl.title = 'Перетащи сырую еду';
-}
-inputEl.title = cook.input ? (cook.input.name + ' x' + cook.input.count) : 'Перетащи сырую еду';
+    if (cook.input) {
+      inputEl.innerHTML = cook.input.emoji + '<span style="position:absolute;bottom:2px;right:4px;font-size:9px;color:#fff;text-shadow:0 0 2px #000;">' + cook.input.count + '</span>';
+      inputEl.style.position = 'relative';
+      inputEl.title = cook.input.name + ' x' + cook.input.count;
+    } else {
+      inputEl.innerHTML = '';
+      inputEl.title = 'Перетащи сырую еду';
+    }
     
     inputEl.ondragover = function(e) { e.preventDefault(); };
-inputEl.ondrop = function(e) {
-  e.preventDefault();
-  let data = JSON.parse(e.dataTransfer.getData('text/plain'));
-  if (data.from !== 'inventory') return;
-  let invItem = inventory[data.slot];
-  if (!invItem) return;
-  let recipe = COOKING_RECIPES[invItem.name];
-  if (!recipe) return;
-  
-  if (cook.output && cook.output.name !== recipe.result) { addLog('❌ Забери готовую еду!'); return; }
-  if (cook.input && cook.input.name !== invItem.name) { addLog('🔥 Уже готовится другое!'); return; }
-  
-  if (!cook.input) {
-    cook.input = { name: invItem.name, emoji: invItem.emoji, texKey: invItem.texKey, count: 0 };
-    cook.progress = 0;
-    cook.time = COOKING_RECIPES[invItem.name].time;
-  }
-  
-  cook.input.count++;
-  invItem.count--;
-  if (invItem.count <= 0) inventory[data.slot] = null;
-  
-  updateCampfireUI();
-  addLog('🔥 +1 к готовке: ' + invItem.name);
-};
+    inputEl.ondrop = function(e) {
+      e.preventDefault();
+      let data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      if (data.from !== 'inventory') return;
+      let invItem = inventory[data.slot];
+      if (!invItem) return;
+      
+      let itemData = findItemData(invItem.name);
+      if (!itemData || !itemData.cook) return;
+      
+      let resultItem = ALL_ITEMS[itemData.cook.result];
+      if (!resultItem) return;
+      
+      if (cook.output && cook.output.name !== resultItem.name) { addLog('❌ Забери готовую еду!'); return; }
+      if (cook.input && cook.input.name !== invItem.name) { addLog('🔥 Уже готовится другое!'); return; }
+      
+      if (!cook.input) {
+        cook.input = { name: invItem.name, emoji: invItem.emoji, texKey: invItem.texKey, count: 0 };
+        cook.progress = 0;
+        cook.time = itemData.cook.time;
+      }
+      
+      cook.input.count++;
+      invItem.count--;
+      if (invItem.count <= 0) inventory[data.slot] = null;
+      
+      updateCampfireUI();
+      addLog('🔥 +1 к готовке: ' + invItem.name);
+    };
   }
   
   // Выходной слот
   let outputEl = document.getElementById('cook-output');
   if (outputEl) {
-if (cook.output) {
-  outputEl.innerHTML = cook.output.emoji + '<span style="position:absolute;bottom:2px;right:4px;font-size:9px;color:#fff;text-shadow:0 0 2px #000;">' + cook.output.count + '</span>';
-  outputEl.style.position = 'relative';
-  outputEl.title = cook.output.name + ' x' + cook.output.count;
-} else {
-  outputEl.innerHTML = '';
-  outputEl.title = '';
-}
-outputEl.title = cook.output ? (cook.output.name + (cook.output.count > 1 ? ' x' + cook.output.count : '')) : '';
-    
-outputEl.onclick = function() {
-  if (cook.output) {
-    let toTake = cook.output.count || 1;
-    let taken = 0;
-    for (let c = 0; c < toTake; c++) {
-      if (addToInventory({ name: cook.output.name, emoji: cook.output.emoji, count: 1 })) {
-        taken++;
-      } else {
-        break;
-      }
-    }
-    if (taken >= toTake) {
-      cook.output = null;
+    if (cook.output) {
+      outputEl.innerHTML = cook.output.emoji + '<span style="position:absolute;bottom:2px;right:4px;font-size:9px;color:#fff;text-shadow:0 0 2px #000;">' + cook.output.count + '</span>';
+      outputEl.style.position = 'relative';
+      outputEl.title = cook.output.name + ' x' + cook.output.count;
     } else {
-      cook.output.count = toTake - taken;
+      outputEl.innerHTML = '';
+      outputEl.title = '';
     }
-    updateCampfireUI();
-    addLog('🍖 Забрано: ' + taken + ' шт.');
-  }
-};
+    
+    outputEl.onclick = function() {
+      if (cook.output) {
+        let toTake = cook.output.count || 1;
+        let taken = 0;
+        for (let c = 0; c < toTake; c++) {
+          if (addToInventory({ name: cook.output.name, emoji: cook.output.emoji, count: 1 })) {
+            taken++;
+          } else break;
+        }
+        if (taken >= toTake) cook.output = null;
+        else cook.output.count = toTake - taken;
+        updateCampfireUI();
+        addLog('🍖 Забрано: ' + taken + ' шт.');
+      }
+    };
   }
   
-  // Прогресс
+  // Топливо
+  let fuelEl = document.getElementById('cook-fuel');
+  let fuelBar = document.getElementById('cook-fuel-fill');
+  if (fuelEl && fuelBar) {
+    let totalFuel = campfire.fuel ? campfire.fuel.length : 0;
+    let fuelPct = campfire.fuelTime > 0 ? (campfire.fuelTime / campfire.fuelMax) * 100 : 0;
+    
+    fuelEl.innerHTML = totalFuel > 0 ? '🪵' + (totalFuel > 1 ? '<span style="position:absolute;bottom:2px;right:4px;font-size:9px;">' + totalFuel + '</span>' : '') : '';
+    fuelEl.style.position = 'relative';
+    fuelEl.title = totalFuel > 0 ? 'Брёвен: ' + totalFuel : 'Перетащи дрова';
+    
+    fuelBar.style.width = fuelPct + '%';
+    
+    fuelEl.ondragover = function(e) { e.preventDefault(); };
+    fuelEl.ondrop = function(e) {
+      e.preventDefault();
+      let data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      if (data.from !== 'inventory') return;
+      let invItem = inventory[data.slot];
+      if (!invItem) return;
+      
+      // Ищем топливо по имени
+      let itemData = findItemData(invItem.name);
+      let fuelTime = (itemData && itemData.fuel) ? itemData.fuel.time : 0;
+      if (fuelTime <= 0) return;
+      
+      let count = invItem.count;
+      for (let c = 0; c < count; c++) {
+        campfire.fuel.push(fuelTime);
+      }
+      if (campfire.fuel.length > 0 && campfire.fuelTime <= 0) {
+        campfire.fuelTime = campfire.fuel[0];
+      }
+      campfire.fuelMax = fuelTime;
+      
+      let maxRadius = 4.0;
+      let baseRadius = 1.0;
+      let fuelBonus = Math.min((campfire.fuel.length - 1) * 0.3, maxRadius - baseRadius);
+      let progressBonus = (campfire.fuelTime / campfire.fuelMax) * 0.3;
+      campfire.lightRadius = Math.min(baseRadius + fuelBonus + progressBonus, maxRadius);
+      if(campfire.fuel.length === 0 && campfire.fuelTime <= 0) campfire.lightRadius = 0;
+      
+      inventory[data.slot] = null;
+      updateCampfireUI();
+      addLog('🪵 +' + count + ' топлива в костёр');
+    };
+  }
+  
+  // Прогресс готовки
   let fill = document.getElementById('cook-progress-fill');
   let text = document.getElementById('cook-progress-text');
   if (fill && text) {
@@ -437,66 +466,65 @@ outputEl.onclick = function() {
   if (!invSlotsEl) return;
   invSlotsEl.innerHTML = '';
   
- for (let i = 0; i < inventory.length; i++) {
-  let slot = document.createElement('div');
-  slot.style.cssText = 'width:40px;height:40px;background:rgba(255,255,255,0.15);border:2px solid #ffcc00;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;position:relative;cursor:pointer;';
-  let item = inventory[i];
-  if (item) {
-    let icon = item.emoji;
-    if (item.texKey && getTex(item.texKey)) icon = '<img src="' + getTex(item.texKey).src + '" style="width:22px;height:22px;object-fit:contain;">';
-    slot.innerHTML = icon + '<span style="position:absolute;bottom:2px;right:4px;font-size:9px;">' + (item.count > 1 ? item.count : '') + '</span>';
-  }
-  slot.title = item ? item.name + (item.count > 1 ? ' x' + item.count : '') : '';
-  
-  slot.draggable = true;
-  (function(idx) {
-    // Клик — отправить в готовку
-slot.addEventListener('click', function(e) {
-  e.stopPropagation();
-  
-  let invItem = inventory[idx];
-  if (!invItem) return;
-  let recipe = COOKING_RECIPES[invItem.name];
-  if (!recipe) return;
-  
-  // Если выход занят другой едой — нельзя
-  if (cook.output && cook.output.name !== recipe.result) {
-    addLog('❌ Забери готовую еду!');
-    return;
-  }
-  
-  // Если уже готовится другая еда — нельзя
-  if (cook.input && cook.input.name !== invItem.name) {
-    addLog('🔥 Уже готовится другое!');
-    return;
-  }
-  
-  // Добавляем 1 штуку в сырой слот
-  if (!cook.input) {
-    cook.input = { name: invItem.name, emoji: invItem.emoji, texKey: invItem.texKey, count: 0 };
-    cook.progress = 0;
-    cook.time = COOKING_RECIPES[invItem.name].time;
-  }
-  
-  cook.input.count++;
-  invItem.count--;
-  if (invItem.count <= 0) inventory[idx] = null;
-  
-  updateCampfireUI();
-  addLog('🔥 +1 к готовке: ' + invItem.name + ' (x' + cook.input.count + ')');
-});
+  for (let i = 0; i < inventory.length; i++) {
+    let slot = document.createElement('div');
+    slot.style.cssText = 'width:40px;height:40px;background:rgba(255,255,255,0.15);border:2px solid #ffcc00;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;position:relative;cursor:pointer;';
+    let item = inventory[i];
+    if (item) {
+      let icon = item.emoji;
+      if (item.texKey && getTex(item.texKey)) icon = '<img src="' + getTex(item.texKey).src + '" style="width:22px;height:22px;object-fit:contain;">';
+      slot.innerHTML = icon + '<span style="position:absolute;bottom:2px;right:4px;font-size:9px;">' + (item.count > 1 ? item.count : '') + '</span>';
+    }
+    slot.title = item ? item.name + (item.count > 1 ? ' x' + item.count : '') : '';
     
-    // Drag start
-    slot.addEventListener('dragstart', function(e) {
-      if (inventory[idx]) {
-        e.dataTransfer.setData('text/plain', JSON.stringify({ from: 'inventory', slot: idx }));
-        e.dataTransfer.effectAllowed = 'move';
-      }
-    });
-  })(i);
-  
-  invSlotsEl.appendChild(slot);
+    slot.draggable = true;
+    (function(idx) {
+      slot.addEventListener('click', function(e) {
+        e.stopPropagation();
+        
+        let invItem = inventory[idx];
+        if (!invItem) return;
+        let itemData = findItemData(invItem.name);
+        if (!itemData || !itemData.cook) return;
+        
+        let resultItem = ALL_ITEMS[itemData.cook.result];
+        if (!resultItem) return;
+        
+        if (cook.output && cook.output.name !== resultItem.name) { addLog('❌ Забери готовую еду!'); return; }
+        if (cook.input && cook.input.name !== invItem.name) { addLog('🔥 Уже готовится другое!'); return; }
+        
+        if (!cook.input) {
+          cook.input = { name: invItem.name, emoji: invItem.emoji, texKey: invItem.texKey, count: 0 };
+          cook.progress = 0;
+          cook.time = itemData.cook.time;
+        }
+        
+        cook.input.count++;
+        invItem.count--;
+        if (invItem.count <= 0) inventory[idx] = null;
+        
+        updateCampfireUI();
+        addLog('🔥 +1 к готовке: ' + invItem.name + ' (x' + cook.input.count + ')');
+      });
+      
+      slot.addEventListener('dragstart', function(e) {
+        if (inventory[idx]) {
+          e.dataTransfer.setData('text/plain', JSON.stringify({ from: 'inventory', slot: idx }));
+          e.dataTransfer.effectAllowed = 'move';
+        }
+      });
+    })(i);
+    
+    invSlotsEl.appendChild(slot);
+  }
 }
+
+// Вспомогательная функция
+function findItemData(itemName) {
+  for (let key in ALL_ITEMS) {
+    if (ALL_ITEMS[key].name === itemName) return ALL_ITEMS[key];
+  }
+  return null;
 }
 
 let textures = {};
@@ -638,7 +666,7 @@ function addLog(m) {
 let player = {
   rx: 0, ry: 0, tx: 0, ty: 0,
   hp: 100, maxHp: 100, damage: 5, attackRange: 1.5,
-  attackCooldown: 0, attackCooldownTime: 300,
+  attackCooldown: 0, attackCooldownTime: 600,
   lastMoveTime: 0, moveDelay: 100, moving: false,
   level: 1, xp: 0, xpToNext: 50, pendingLevelUps: 0,
   heldItem: null
@@ -741,8 +769,18 @@ function useSelectedItem() {
   let item = inventory[selectedSlot];
   if (!item) { addLog('📦 Пустой слот!'); return; }
   
-  let healAmount = EDIBLE_ITEMS[item.name] || EDIBLE_ITEMS[item.emoji] || 0;
-  if (healAmount > 0) {
+  // Ищем данные предмета в ALL_ITEMS
+  let itemData = null;
+  for (let key in ALL_ITEMS) {
+    if (ALL_ITEMS[key].name === item.name) {
+      itemData = ALL_ITEMS[key];
+      break;
+    }
+  }
+  
+  // Еда
+  if (itemData && itemData.edible && itemData.edible.heal) {
+    let healAmount = itemData.edible.heal;
     let oldHp = player.hp;
     player.hp = Math.min(player.maxHp, player.hp + healAmount);
     if (player.hp - oldHp > 0) addLog('🍽️ Съедено: ' + item.name + ' +' + (player.hp - oldHp) + ' HP');
@@ -751,11 +789,20 @@ function useSelectedItem() {
     updateInventoryUI(); return;
   }
   
-  if (item.name === (ALL_ITEMS['item_campfire'] ? ALL_ITEMS['item_campfire'].name : '🔥 Костёр')) { if(placeItem('campfire','#ff6600',4)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
-  if (item.name === (ALL_ITEMS['item_torch'] ? ALL_ITEMS['item_torch'].name : '🕯️ Факел')) { if(placeItem('torch','#ffaa00',2)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
-  if (item.name === (ALL_ITEMS['item_chest'] ? ALL_ITEMS['item_chest'].name : '📦 Сундук')) { if(placeItem('chest','#8B4513',0)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
-  if (item.name === (ALL_ITEMS['item_tent'] ? ALL_ITEMS['item_tent'].name : '⛺ Палатка')) { if(placeItem('tent','#a08860',0)){item.count--;if(item.count<=0)inventory[selectedSlot]=null;} updateInventoryUI(); return; }
+  // Placeable предметы
+  if (itemData && itemData.placeable) {
+    let typeKey = itemData.placeKey;
+    let color = itemData.placeColor || '#fff';
+    let radius = itemData.lightRadius || 0;
+    if (placeItem(typeKey, color, radius)) {
+      item.count--;
+      if (item.count <= 0) inventory[selectedSlot] = null;
+      updateInventoryUI();
+    }
+    return;
+  }
   
+  // Взять в руку
   player.heldItem = { slot: selectedSlot, item: item };
   addLog('✋ Взято: ' + item.name + ' (кликни куда положить)');
 }
@@ -868,7 +915,6 @@ function updatePlayerStats() {
   let rangeEl = document.getElementById('stat-range');
   let speedEl = document.getElementById('stat-speed');
   let cdEl = document.getElementById('stat-cd');
-  let slotsEl = document.getElementById('stat-slots');
   
   if (dmgEl) dmgEl.textContent = player.damage;
   if (rangeEl) rangeEl.textContent = player.attackRange;
@@ -877,7 +923,6 @@ function updatePlayerStats() {
   
   let used = 0;
   for (let i = 0; i < inventory.length; i++) if (inventory[i]) used++;
-  if (slotsEl) slotsEl.textContent = used;
 }
 
 // Сундук (открытый)
@@ -931,11 +976,12 @@ function getEntitiesAt(tx, ty, chunk) {
         } else {
           let rt = ALL_RESOURCES[res.type];
           if (rt) {
-            entities.push(createEntity({
-              type: 'resource', resourceKey: res.type,
-              tx, ty, texKey: rt.texKey, name: rt.name,
-              hp: rt.hp, maxHp: rt.hp, h: rt.h || 10, color: rt.color, drops: rt.drops
-            }));
+entities.push(createEntity({
+  type: 'resource', resourceKey: res.type,
+  tx, ty, texKey: rt.texKey, name: rt.name,
+  hp: rt.hp, maxHp: rt.hp, h: rt.h || 10, color: rt.color, drops: rt.drops,
+  _flipped: Math.random() < 0.5
+}));
           }
         }
       }
@@ -986,7 +1032,7 @@ function getEntitiesAt(tx, ty, chunk) {
     let allEnts = getVisibleEntities();
     for (let i = 0; i < allEnts.length; i++) {
       let e = allEnts[i];
-      if (e.type === 'campfire') {
+      if (e.type === 'campfire' && e.lightRadius > 0) {
         if (Math.abs(e.tx - tx) + Math.abs(e.ty - ty) <= e.lightRadius) { nearFire = true; break; }
       }
     }
@@ -1051,7 +1097,8 @@ function getEntitiesAt(tx, ty, chunk) {
       xpReward: mob.xpReward || 2,
       drops: mob.drops || [],
       fleeTimer: 0,
-      ai: { state:'idle', wanderTarget:null, idleTimer:1000+Math.random()*3000, moveTimer:0, moveCooldown:0, forgetTimer:0 }
+      ai: { state:'idle', wanderTarget:null, idleTimer:1000+Math.random()*3000, moveTimer:0, moveCooldown:0, forgetTimer:0 },
+      _flipped: Math.random() < 0.5
     }));
   }
   
@@ -1128,14 +1175,15 @@ function burnMonstersInDay(dt){
           e.fallAngle=(Math.random()-0.5)*1.0;
           e.fallDirection=Math.random()>0.5?1:-1;
           
-          // Дроп остаётся на земле
-          if(e.drops){
-            for(let d=0;d<e.drops.length;d++){
-              if(Math.random()<e.drops[d].chance){
-                dropItemOnGround({name:e.drops[d].name,emoji:e.drops[d].emoji,texKey:e.drops[d].texKey,count:1},e.tx,e.ty);
-              }
-            }
-          }
+// Дроп остаётся на земле
+if(e.drops){
+  for(let d=0;d<e.drops.length;d++){
+    let itemData = ALL_ITEMS[e.drops[d].itemKey];
+    if(itemData && Math.random() < e.drops[d].chance){
+      dropItemOnGround({name:itemData.name,emoji:itemData.emoji,texKey:itemData.texKey,count:1},e.tx,e.ty);
+    }
+  }
+}
           
           // Опыт только если игрок нанёс последний удар
           if(e._lastHitByPlayer){
@@ -1212,6 +1260,11 @@ function updateAI(e, dt, isPeaceful) {
     let dist = Math.sqrt(ddx * ddx + ddy * ddy);
     if (dist <= speed) { e.rx = e.tx; e.ry = e.ty; }
     else { e.rx += (ddx / dist) * speed; e.ry += (ddy / dist) * speed; }
+    // Сохраняем направление
+    if (dist > 0.001) {
+      e._lastDDX = ddx;
+      e._lastDDY = ddy;
+    }
   }
   
   // Убегание при низком HP для animal
@@ -1227,7 +1280,6 @@ function updateAI(e, dt, isPeaceful) {
   
   // Проверка fleeFrom — для ВСЕХ
   if (!e.fleeTimer && e.fleeFrom) {
-    // Проверка игрока
     if (e.fleeFrom.indexOf('player') !== -1 && distToPlayer < 5 && player.hp > 0) {
       e.fleeTimer = 2000;
       e._fleeFrom = { tx: player.tx, ty: player.ty };
@@ -1283,43 +1335,29 @@ function updateAI(e, dt, isPeaceful) {
   let isAggressive = e._isAggressive || (!e.neutral);
   let shouldChase = false;
   
-  // Охота на добычу
   if (isAggressive && ai.state !== 'chase') {
     let allEnts = getVisibleEntities();
     for (let j = 0; j < allEnts.length; j++) {
       let prey = allEnts[j];
       if (prey.hp > 0 && prey.mobKey && prey !== e) {
         let canHunt = false;
-        if (e.huntTargets) {
-          canHunt = e.huntTargets.indexOf(prey.mobKey) !== -1;
-        } else {
-          canHunt = prey.type === 'peaceful';
-        }
+        if (e.huntTargets) { canHunt = e.huntTargets.indexOf(prey.mobKey) !== -1; }
+        else { canHunt = prey.type === 'peaceful'; }
         if (!canHunt) continue;
-        
         let distToPrey = Math.sqrt((e.tx - prey.tx) ** 2 + (e.ty - prey.ty) ** 2);
-        if (distToPrey <= e.chaseRange) {
-          shouldChase = true;
-          ai._hunting = prey;
-          break;
-        }
+        if (distToPrey <= e.chaseRange) { shouldChase = true; ai._hunting = prey; break; }
       }
     }
   }
   
-  // Преследование обидчика (для нейтралов)
   if (!shouldChase && e._wasAttacked && e._lastAttacker) {
     let attacker = e._lastAttacker;
     if (attacker.hp > 0) {
       let distToAttacker = Math.sqrt((e.tx - attacker.tx) ** 2 + (e.ty - attacker.ty) ** 2);
-      if (distToAttacker <= e.chaseRange) {
-        shouldChase = true;
-        ai._hunting = attacker;
-      }
+      if (distToAttacker <= e.chaseRange) { shouldChase = true; ai._hunting = attacker; }
     }
   }
   
-  // Преследование игрока
   if (!shouldChase) {
     if (isAggressive) {
       let effectiveChaseRange = player.inTent ? e.chaseRange / 2 : e.chaseRange;
@@ -1448,8 +1486,8 @@ function attackEntity(target) {
       // Хил от первого дропа
       if (target.drops && target.drops.length > 0) {
         let itemData = ALL_ITEMS[target.drops[0].itemKey];
-        if (itemData && itemData.heal) {
-          player.hp = Math.min(player.maxHp, player.hp + itemData.heal);
+        if (itemData && itemData.edible && itemData.edible.heal) {
+          player.hp = Math.min(player.maxHp, player.hp + itemData.edible.heal);
         }
       }
       addXp(target.xpReward || 2); 
@@ -1577,7 +1615,10 @@ function placeItem(typeKey, color, radius) {
   } else if (typeKey === 'tent') {
   chunks[ck].entities.push(createEntity({ type:'tent', tx:nx, ty:ny, name:'⛺ Палатка', hp:999, maxHp:999, h:14, color:'#a08860' }));
   } else {
-    chunks[ck].entities.push(createEntity({ type:'campfire', tx:nx, ty:ny, name:'Костёр', hp:999, maxHp:999, h:6, color:color, lightRadius:radius }));
+    chunks[ck].entities.push(createEntity({ 
+  type:'campfire', tx:nx, ty:ny, name:'Костёр', hp:999, maxHp:999, h:6, color:color, lightRadius:radius,
+  fuel: [], fuelTime: 0, fuelMax: 60000
+}));
   }
   addLog('✅ Установлено!');
   return true;
@@ -1989,7 +2030,6 @@ function drawEntityTex(e){
     if(progress >= 1){ctx.restore();return;}
     ctx.globalAlpha = 1 - progress;
     
-    // Анимация падения
     if(e.fallAngle !== undefined){
       ctx.translate(pos.x, pos.y);
       ctx.rotate(e.fallAngle * progress * e.fallDirection);
@@ -2009,18 +2049,32 @@ function drawEntityTex(e){
   ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();
   ctx.ellipse(pos.x,pos.y+2*zoom,dw*0.35,dh*0.12,0,0,Math.PI*2);ctx.fill();
   
+  // Зеркалирование
+  let shouldFlip = e._flipped || false;
+  if (e._lastDDX !== undefined && (e._lastDDX !== 0 || e._lastDDY !== 0)) {
+    shouldFlip = (e._lastDDX > 0 || e._lastDDY < 0);
+  }
+  
+  if (shouldFlip) {
+    ctx.translate(pos.x, 0);
+    ctx.scale(-1, 1);
+    ctx.translate(-pos.x, 0);
+  }
+  
   ctx.drawImage(img,pos.x-dw/2,pos.y-dh,dw,dh);
   ctx.globalAlpha=1;
   
+  ctx.restore(); // Закрываем — зеркалирование больше не действует
+  
+  // HP бар и имя — без зеркалирования
   let dx=mouseX-pos.x,dy=mouseY-(pos.y-h+h*0.4),dist=Math.sqrt(dx*dx+dy*dy);
-
+  
   if(dist<30*zoom){
+    ctx.save();
     let barW=12*zoom,barH=2*zoom,barX=pos.x-barW/2,barY=pos.y-h-9*zoom;
     ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);
     ctx.fillStyle='#ff3333';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);
-  }
-  
-  if(dist<30*zoom){
+    
     if(e.type==='monster'){
       if(e.burnsInDay&&getTimeOfDay()==='day'){ctx.fillStyle='rgba(255,100,0,0.5)';ctx.beginPath();ctx.arc(pos.x,pos.y-h-2*zoom,4*zoom,0,Math.PI*2);ctx.fill();}
       if(e.neutral){ctx.fillStyle='#ff0';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('⚠️',pos.x,pos.y-h-5*zoom);}
@@ -2032,9 +2086,8 @@ function drawEntityTex(e){
       ctx.fillText(e.name,pos.x,pos.y-h-7*zoom);
       ctx.fillStyle='#8f8';ctx.fillText('❤️'+e.hp,pos.x,pos.y-h+2*zoom);
     }
+    ctx.restore();
   }
-  
-  ctx.restore();
 }
 
 function drawPlayerCode(){
@@ -2190,12 +2243,22 @@ function render(){
 // Управление
 let keys={};
 window.addEventListener('keydown',function(e){
-  if(e.code==='Escape'){
-    if(openChest){closeChestUI();e.preventDefault();return;}
-    if(openCampfire){closeCampfireUI();e.preventDefault();return;}
-    let cp=document.getElementById('craft-panel');if(cp&&cp.style.display==='flex'){cp.style.display='none';paused=false;document.getElementById('pause-menu').classList.remove('active');}else togglePause();
-    e.preventDefault();return;
+if(e.code==='Escape'){
+  // Закрываем консоль если открыта
+  let consoleEl = document.getElementById('console');
+  if(consoleEl && consoleEl.style.display === 'block'){
+    consoleEl.style.display = 'none';
+    let s = document.getElementById('console-suggest');
+    if(s) s.style.display = 'none';
+    paused = false;
+    e.preventDefault();
+    return;
   }
+  if(openChest){closeChestUI();e.preventDefault();return;}
+  if(openCampfire){closeCampfireUI();e.preventDefault();return;}
+  let cp=document.getElementById('craft-panel');if(cp&&cp.style.display==='flex'){cp.style.display='none';paused=false;document.getElementById('pause-menu').classList.remove('active');}else togglePause();
+  e.preventDefault();return;
+}
   if(paused||openChest)return;
   if(e.code==='KeyC'){toggleCraftMenu();e.preventDefault();return;}
   if(e.code==='KeyE'){useSelectedItem();e.preventDefault();return;}
@@ -2338,16 +2401,18 @@ canvas.addEventListener('contextmenu', function(e) {
   let item = inventory[selectedSlot];
   if (!item) return;
   
+  // Ищем данные предмета
+  let itemData = findItemData(item.name);
+  if (!itemData || !itemData.placeable) return;
+  
   let rect = canvas.getBoundingClientRect();
   let mx = e.clientX - rect.left;
   let my = e.clientY - rect.top;
   
-  // Находим клетку под курсором
   let entities = getVisibleEntities();
   let bestTx = player.tx, bestTy = player.ty;
   let bestDist = 50;
   
-  // Проверяем все клетки вокруг (по entities + тайлы)
   let checkedTiles = {};
   let checkTile = function(tx, ty) {
     let key = tx + ',' + ty;
@@ -2365,34 +2430,26 @@ canvas.addEventListener('contextmenu', function(e) {
     }
   };
   
-  // Проверяем тайлы и сущности
   for (let i = 0; i < entities.length; i++) {
     checkTile(entities[i].tx, entities[i].ty);
   }
-  // Проверяем соседние клетки игрока
   for (let dx = -2; dx <= 2; dx++) {
     for (let dy = -2; dy <= 2; dy++) {
       checkTile(player.tx + dx, player.ty + dy);
     }
   }
   
-  // Проверяем дальность по Евклиду
   let distToTarget = Math.sqrt((bestTx - player.tx) ** 2 + (bestTy - player.ty) ** 2);
   if (distToTarget > 1.5) {
     addLog('📏 Слишком далеко для установки!');
     return;
   }
   
-  // Временно ставим игрока на целевую клетку
   let oldTx = player.tx, oldTy = player.ty;
   player.tx = bestTx;
   player.ty = bestTy;
   
-  // Пробуем установить
-  let placed = false;
-  if (item.name === '🔥 Костёр') { placed = placeItem('campfire','#ff6600',4); }
-  if (item.name === '🕯️ Факел') { placed = placeItem('torch','#ffaa00',2); }
-  if (item.name === '📦 Сундук') { placed = placeItem('chest','#8B4513',0); }
+  let placed = placeItem(itemData.placeKey, itemData.placeColor || '#fff', itemData.lightRadius || 0);
   
   if (placed) {
     item.count--;
@@ -2400,7 +2457,6 @@ canvas.addEventListener('contextmenu', function(e) {
     updateInventoryUI();
   }
   
-  // Возвращаем позицию
   player.tx = oldTx;
   player.ty = oldTy;
 });
@@ -2409,40 +2465,172 @@ canvas.addEventListener('contextmenu', function(e) {
 // Часть 5 (финал): UI, Цикл, Запуск
 // ══════════════════════════════════════════════
 
+let commandHistory = [];
+let historyIndex = -1;
+
+let suggestIndex = -1;
+
+// Обработчик ввода для автодополнения
+document.getElementById('console-input').addEventListener('input', function(e) {
+  let val = this.value;
+  let parts = val.split(' ');
+  let lastPart = parts[parts.length - 1].toLowerCase();
+  
+  let suggestEl = document.getElementById('console-suggest');
+  if (!suggestEl) {
+    suggestEl = document.createElement('div');
+    suggestEl.id = 'console-suggest';
+    suggestEl.style.cssText = 'position:fixed;bottom:40px;left:10px;background:rgba(0,0,0,0.9);color:#0f0;font-family:monospace;font-size:12px;padding:5px;border-radius:4px;display:none;z-index:301;max-height:200px;overflow-y:auto;';
+    document.body.appendChild(suggestEl);
+  }
+  
+  suggestIndex = -1;
+  
+  if (val.length === 0) { suggestEl.style.display = 'none'; return; }
+  
+  let suggestions = [];
+  
+if (parts.length === 1 && val.startsWith('/')) {
+    let cmds = ['time', 'find', 'tp', 'god', 'help', 'give'];
+    let prefix = parts[0].replace('/', '').toLowerCase();
+    suggestions = cmds.filter(c => c.startsWith(prefix)).map(c => '/' + c);
+  } else if (parts.length === 2) {
+    let cmd = parts[0].replace('/', '').toLowerCase();
+    if (cmd === 'time') {
+      suggestions = ['day', 'night', '300'].filter(s => s.startsWith(lastPart));
+    } else if (cmd === 'find') {
+      let allRes = [];
+      for (let bk in BIOMES) {
+        if (BIOMES[bk].resources) {
+          for (let rk in BIOMES[bk].resources) {
+            if (allRes.indexOf(rk) === -1) allRes.push(rk);
+          }
+        }
+      }
+      let mobKeys = Object.keys(ALL_MOBS);
+      allRes = allRes.concat(mobKeys).concat(['cave_entrance', 'resource']);
+      suggestions = allRes.filter(s => s.toLowerCase().startsWith(lastPart));
+    } else if (cmd === 'give') {
+      let itemKeys = Object.keys(ALL_ITEMS);
+      suggestions = itemKeys.filter(s => s.toLowerCase().startsWith(lastPart));
+    } else if (cmd === 'tp') {
+      suggestions = [player.tx + ' ' + player.ty];
+    }
+  } else if (parts.length === 3 && parts[0].replace('/', '').toLowerCase() === 'time') {
+    suggestions = ['day', 'night'].filter(s => s.startsWith(lastPart));
+  }
+  
+  if (suggestions.length > 0) {
+    suggestEl.innerHTML = suggestions.map((s, i) => '<span style="cursor:pointer;padding:2px 5px;display:block;" data-index="'+i+'" onmousedown="var inp=document.getElementById(\'console-input\');var v=inp.value;var li=v.lastIndexOf(\' \');inp.value=(li>0?v.substring(0,li+1):\'\')+\'' + s + '\';document.getElementById(\'console-suggest\').style.display=\'none\';inp.focus();">' + s + '</span>').join('');
+    suggestEl.style.display = 'block';
+  } else {
+    suggestEl.style.display = 'none';
+  }
+});
+
+// Стрелки для истории + Tab + Enter + Escape
+document.getElementById('console-input').addEventListener('keydown', function(e) {
+  if (e.code === 'Tab') {
+    e.preventDefault();
+    let suggestEl = document.getElementById('console-suggest');
+    if (suggestEl && suggestEl.style.display !== 'none') {
+      let items = suggestEl.querySelectorAll('span');
+      if (items.length > 0) {
+        suggestIndex = (suggestIndex + 1) % items.length;
+        items.forEach((s, i) => s.style.background = i === suggestIndex ? '#333' : 'transparent');
+      }
+    }
+    return;
+  }
+  
+  if (e.code === 'Enter') {
+    e.preventDefault();
+    let suggestEl = document.getElementById('console-suggest');
+    if (suggestEl && suggestEl.style.display !== 'none' && suggestIndex >= 0) {
+      let items = suggestEl.querySelectorAll('span');
+      if (items.length > suggestIndex && items[suggestIndex]) {
+        let val = this.value;
+        let parts = val.split(' ');
+        parts[parts.length - 1] = items[suggestIndex].textContent;
+        this.value = parts.join(' ');
+        suggestEl.style.display = 'none';
+        suggestIndex = -1;
+        this.focus();
+        return;
+      }
+    }
+    // Отправляем
+    suggestIndex = -1;
+    if (suggestEl) suggestEl.style.display = 'none';
+    let cmd = this.value.trim();
+    this.value = '';
+    executeCommand(cmd);
+    return;
+  }
+  
+  if (e.code === 'ArrowUp') {
+    e.preventDefault();
+    if (historyIndex < commandHistory.length - 1) {
+      historyIndex++;
+      this.value = commandHistory[commandHistory.length - 1 - historyIndex];
+    }
+    return;
+  }
+  
+  if (e.code === 'ArrowDown') {
+    e.preventDefault();
+    if (historyIndex > 0) {
+      historyIndex--;
+      this.value = commandHistory[commandHistory.length - 1 - historyIndex];
+    } else {
+      historyIndex = -1;
+      this.value = '';
+    }
+    return;
+  }
+  
+  if (e.code === 'Escape') {
+    document.getElementById('console').style.display = 'none';
+    let s = document.getElementById('console-suggest');
+    if(s) s.style.display = 'none';
+    paused = false;
+    document.getElementById('console-input').blur();
+    e.stopPropagation();
+    return;
+  }
+});
+
 function executeCommand(cmd) {
+  commandHistory.push(cmd);
+  if (commandHistory.length > 50) commandHistory.shift();
+  historyIndex = -1;
+
   let output = document.getElementById('console-output');
   let parts = cmd.split(' ');
-let command = parts[0].toLowerCase().replace('/', '');
+  let command = parts[0].toLowerCase().replace('/', '');
   
-  // /time day — установить день
   if(command === 'time' && parts[1] === 'day'){
-    cycleTime = DAY_DURATION * 0.15; // 15% дня
+    cycleTime = DAY_DURATION * 0.15;
     addConsoleLine('☀️ Время установлено на день');
   }
-  // /time night — установить ночь
   else if(command === 'time' && parts[1] === 'night'){
-    cycleTime = DAY_DURATION + NIGHT_DURATION * 0.3; // 30% ночи
-    addConsoleLine('🌙 Время установлено на ночь');
+    cycleTime = DAY_DURATION + NIGHT_DURATION * 0.3;
+    addConsoleLine('Время установлено на ночь');
   }
-  // /time 300 — установить 300 сек от начала дня
   else if(command === 'time' && !isNaN(parts[1])){
     cycleTime = parseInt(parts[1]) * 1000;
-    addConsoleLine('⏰ Время установлено на ' + parts[1] + ' сек');
+    addConsoleLine('Время установлено на ' + parts[1] + ' сек');
   }
-  // /find cave_entrance — найти ближайшие входы в пещеру
   else if(command === 'find'){
     let type = parts[1];
     let results = [];
     let range = 100;
-    
     for (let tx = player.tx - range; tx <= player.tx + range; tx++) {
       for (let ty = player.ty - range; ty <= player.ty + range; ty++) {
         let tile = getTile(tx, ty);
         if (tile.base === 1) continue;
         let biomeConfig = BIOMES[tile.biome];
         if (!biomeConfig || !biomeConfig.resources) continue;
-        
-        // Проверяем ресурсы
         if (biomeConfig.resources[type]) {
           let res = biomeConfig.resources[type];
           let h = hash(tx*1000+123, ty*1000+456);
@@ -2453,19 +2641,17 @@ let command = parts[0].toLowerCase().replace('/', '');
         }
       }
     }
-    
     results.sort((a, b) => a.dist - b.dist);
     let closest = results.slice(0, 5);
     if (closest.length === 0) {
-      addConsoleLine('❌ Ничего не найдено: ' + type + ' в радиусе ' + range);
+      addConsoleLine('Ничего не найдено: ' + type + ' в радиусе ' + range);
     } else {
-      addConsoleLine('🔍 Найдено (' + type + '): ' + results.length + ' шт.');
+      addConsoleLine('Найдено (' + type + '): ' + results.length + ' шт.');
       for (let r of closest) {
         addConsoleLine('  ' + r.name + ' на (' + r.tx + ', ' + r.ty + ') дист: ' + Math.floor(r.dist));
       }
     }
   }
-  // /tp 10 20 — телепорт
   else if(command === 'tp' && !isNaN(parts[1]) && !isNaN(parts[2])){
     let tx = parseInt(parts[1]);
     let ty = parseInt(parts[2]);
@@ -2475,28 +2661,46 @@ let command = parts[0].toLowerCase().replace('/', '');
     camX = canvas.width/2 - pos.x;
     camY = canvas.height/2 - pos.y;
     cachedObjects = null;
-    addConsoleLine('📍 Телепорт на (' + tx + ', ' + ty + ')');
+    addConsoleLine('Телепорт на (' + tx + ', ' + ty + ')');
   }
-  // /god — бессмертие
+  else if(command === 'give' && parts[1]){
+    let itemKey = parts[1];
+    let count = parseInt(parts[2]) || 1;
+    let itemData = ALL_ITEMS[itemKey];
+    if (!itemData) {
+      addConsoleLine('Предмет не найден: ' + itemKey);
+      return;
+    }
+    let added = 0;
+    for (let c = 0; c < count; c++) {
+      if (addToInventory({ name: itemData.name, emoji: itemData.emoji, texKey: itemData.texKey, count: 1 })) {
+        added++;
+      } else {
+        dropItemOnGround({ name: itemData.name, emoji: itemData.emoji, texKey: itemData.texKey, count: count - added }, player.tx, player.ty);
+        break;
+      }
+    }
+    addConsoleLine('Выдано: ' + itemData.name + ' x' + added + (added < count ? ' (остальное на земле)' : ''));
+  }
   else if(command === 'god'){
     player.godMode = !player.godMode;
-    addConsoleLine(player.godMode ? '👼 Бессмертие ВКЛ' : '👼 Бессмертие ВЫКЛ');
+    addConsoleLine(player.godMode ? 'Бессмертие ВКЛ' : 'Бессмертие ВЫКЛ');
   }
-  // /help
   else if(command === 'help'){
     addConsoleLine('/time day|night|сек — установить время');
     addConsoleLine('/find тип — найти объекты');
     addConsoleLine('/tp x y — телепорт');
+    addConsoleLine('/give itemKey count — выдать предмет');
     addConsoleLine('/god — бессмертие');
   }
   else {
-    addConsoleLine('❌ Неизвестная команда: ' + command + ' (/help)');
+    addConsoleLine('Неизвестная команда: ' + command + ' (/help)');
   }
 }
 
 function addConsoleLine(text){
   let output = document.getElementById('console-output');
-  output.innerHTML += '<div>' + text + '</div>';
+  output.innerHTML = '<div>' + text + '</div>' + output.innerHTML;
   output.scrollTop = output.scrollHeight;
 }
 function handleInput(now){
@@ -2570,7 +2774,6 @@ function updateDebugPanel() {
 }
 
 function gameLoop(ts){
-  let unloadTimer = 0;
   let dt=lastTime?ts-lastTime:16;
   lastTime=ts;
   
@@ -2578,7 +2781,7 @@ if(!paused){
     cycleTime=(cycleTime+dt)%FULL_CYCLE;
     validateMonstersForTimeOfDay();
     burnMonstersInDay(dt);
-    // Проверка в палатке
+    
 player.inTent = false;
 let all = getVisibleEntities();
 for (let e of all) {
@@ -2590,92 +2793,118 @@ for (let e of all) {
     handleInput(ts);
     if(player.attackCooldown>0)player.attackCooldown-=dt;
     let objs=collectVisibleObjects();
+    frameSkipCounter++;
     for(let i=0;i<objs.entities.length;i++){
       let e=objs.entities[i];
       if(e.hp>0&&(e.type==='monster'||e.type==='peaceful')){
         if(e.attackCooldown>0)e.attackCooldown-=dt;
+        if(settings.aiSkipFar && e.ai && e.ai.state === 'idle'){
+          let dist = Math.abs(e.tx - player.tx) + Math.abs(e.ty - player.ty);
+          if(dist > settings.aiSkipDistance && frameSkipCounter % 3 !== 0) continue;
+        }
         updateAI(e,dt,e.type==='peaceful');
       }
     }
     cleanupTimer+=dt;
-//     unloadTimer += dt;
-// if (unloadTimer > 300) { // каждые 10 секунд
-//   unloadTimer = 0;
-//   unloadFarChunks();
-// }
     if(cleanupTimer>5000){cleanupTimer=0;cleanupDead();}
   }
   
-  // Обновление готовки на всех кострах
-let allEntities = getVisibleEntities();
-for(let i = 0; i < allEntities.length; i++){
-  let e = allEntities[i];
-  if(e.type === 'campfire' && e.cooking && e.cooking.input && e.cooking.input.count > 0){
-    let cook = e.cooking;
-    cook.progress += dt;
-    
-    // Обновляем прогресс-бар только если это открытый костёр
-    if(openCampfire === e){
-      let fill = document.getElementById('cook-progress-fill');
-      let text = document.getElementById('cook-progress-text');
-      if(fill && text){
-        let pct = Math.min(100, Math.floor((cook.progress / cook.time) * 100));
-        fill.style.height = pct + '%';
-        text.textContent = pct + '%';
-      }
-    }
-    
-    if(cook.progress >= cook.time){
-      let recipe = COOKING_RECIPES[cook.input.name];
-      if(cook.output && cook.output.name === recipe.result){
-        cook.output.count++;
+  // Горение топлива в кострах + готовка
+  let allEntities = getVisibleEntities();
+  for(let i = 0; i < allEntities.length; i++){
+    let e = allEntities[i];
+    if(e.type === 'campfire'){
+      // Горение топлива
+      if(e.fuel && e.fuel.length > 0){
+        e.fuelTime -= dt;
+        if(e.fuelTime <= 0){
+          e.fuel.shift();
+          e.fuelTime = e.fuel.length > 0 ? e.fuel[0] : 0;
+        }
+        // Плавный свет
+        let maxRadius = 4.0;
+        let baseRadius = 1.0;
+        let fuelBonus = Math.min((e.fuel.length - 1) * 0.3, maxRadius - baseRadius);
+        let progressBonus = (e.fuelTime / e.fuelMax) * 0.3;
+        e.lightRadius = Math.min(baseRadius + fuelBonus + progressBonus, maxRadius);
+        if(e.fuel.length === 0 && e.fuelTime <= 0) e.lightRadius = 0;
+        if(openCampfire === e) updateCampfireUI();
       } else {
-        cook.output = { name: recipe.result, emoji: recipe.emoji, count: 1 };
+        e.lightRadius = 0;
       }
-      cook.input.count--;
-      cook.progress = 0;
-      if(cook.input.count <= 0) cook.input = null;
-      addLog('🍖 +1 готово!');
-      if(openCampfire === e) updateCampfireUI();
+      
+      // Готовка (только если есть свет)
+      if(e.cooking && e.cooking.input && e.cooking.input.count > 0 && e.lightRadius > 0){
+        let cook = e.cooking;
+        cook.progress += dt;
+        
+        if(openCampfire === e){
+          let fill = document.getElementById('cook-progress-fill');
+          let text = document.getElementById('cook-progress-text');
+          if(fill && text){
+            let pct = Math.min(100, Math.floor((cook.progress / cook.time) * 100));
+            fill.style.height = pct + '%';
+            text.textContent = pct + '%';
+          }
+        }
+        
+        if(cook.progress >= cook.time){
+          let itemData = findItemData(cook.input.name);
+          if (itemData && itemData.cook) {
+            let resultItem = ALL_ITEMS[itemData.cook.result];
+            if (resultItem) {
+              if (cook.output && cook.output.name === resultItem.name) {
+                cook.output.count++;
+              } else {
+                cook.output = { name: resultItem.name, emoji: resultItem.emoji, count: 1 };
+              }
+            }
+          }
+          cook.input.count--;
+          cook.progress = 0;
+          if(cook.input.count <= 0) cook.input = null;
+          addLog('🍖 +1 готово!');
+          if(openCampfire === e) updateCampfireUI();
+        }
+      }
     }
   }
-}
-  // Подсчёт FPS
-frameCount++;
-fpsTimer += dt;
-if (fpsTimer >= 1000) {
-  fps = frameCount;
-  frameCount = 0;
-  fpsTimer = 0;
-}
-
-// Авто-подстройка качества
-if (settings.qualityMode === 'auto') {
-  if (fps < 25 && settings.renderDistance > 6) {
-    settings.renderDistance = Math.max(6, settings.renderDistance - 2);
-    settings.showGrassDetails = false;
-    settings.showParticles = false;
-    settings.smoothBiomes = false;
-    settings.aiSkipFar = true;
-    settings.aiSkipDistance = 5;
-    cachedObjects = null;
-  } else if (fps < 40 && settings.renderDistance > 10) {
-    settings.renderDistance = Math.max(10, settings.renderDistance - 2);
-    settings.showGrassDetails = true;
-    settings.showParticles = false;
-    settings.smoothBiomes = true;
-    settings.aiSkipFar = true;
-    settings.aiSkipDistance = 8;
-    cachedObjects = null;
-  } else if (fps > 50 && settings.renderDistance < 16) {
-    settings.renderDistance = Math.min(24, settings.renderDistance + 2);
-    settings.showGrassDetails = true;
-    settings.showParticles = true;
-    settings.smoothBiomes = true;
-    settings.aiSkipFar = false;
-    cachedObjects = null;
+  
+  frameCount++;
+  fpsTimer += dt;
+  if (fpsTimer >= 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    fpsTimer = 0;
   }
-}
+
+  if (settings.qualityMode === 'auto') {
+    if (fps < 25 && settings.renderDistance > 6) {
+      settings.renderDistance = Math.max(6, settings.renderDistance - 2);
+      settings.showGrassDetails = false;
+      settings.showParticles = false;
+      settings.smoothBiomes = false;
+      settings.aiSkipFar = true;
+      settings.aiSkipDistance = 5;
+      cachedObjects = null;
+    } else if (fps < 40 && settings.renderDistance > 10) {
+      settings.renderDistance = Math.max(10, settings.renderDistance - 2);
+      settings.showGrassDetails = true;
+      settings.showParticles = false;
+      settings.smoothBiomes = true;
+      settings.aiSkipFar = true;
+      settings.aiSkipDistance = 8;
+      cachedObjects = null;
+    } else if (fps > 50 && settings.renderDistance < 16) {
+      settings.renderDistance = Math.min(24, settings.renderDistance + 2);
+      settings.showGrassDetails = true;
+      settings.showParticles = true;
+      settings.smoothBiomes = true;
+      settings.aiSkipFar = false;
+      cachedObjects = null;
+    }
+  }
+  
   render();
   requestAnimationFrame(gameLoop);
 }
@@ -2907,22 +3136,6 @@ async function startGame() {
     requestAnimationFrame(gameLoop);
     addLog('🎮 Готово!');
     updateInventoryUI();
-  });
-}
-let consoleInput = document.getElementById('console-input');
-if (consoleInput) {
-  consoleInput.addEventListener('keydown', function(e) {
-    if(e.code === 'Enter'){
-      let cmd = this.value.trim();
-      this.value = '';
-      executeCommand(cmd);
-      e.preventDefault();
-    }
-    if(e.code === 'Escape'){
-      document.getElementById('console').style.display = 'none';
-      paused = false;
-      e.preventDefault();
-    }
   });
 }
 startGame();

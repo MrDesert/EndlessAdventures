@@ -12,8 +12,8 @@
     "color": "#5a7a3a", 
     "xpReward": 25,
     "drops": [
-        {"itemKey": "item_bone", "chance": 0.6, "count": 1},
-        {"itemKey": "item_rotten_flesh", "chance": 0.3, "count": 1}
+        {"itemKey": "bone", "chance": 0.6, "count": 1},
+        {"itemKey": "rotten_flesh", "chance": 0.3, "count": 1}
     ],
     "spawn": [
         {"biome": "grass", "chance": 0.015, "maxPerChunk": 2, "spawnTime": "night"},
@@ -34,8 +34,8 @@
     "color": "#ddd", 
     "xpReward": 20,
     "drops": [
-        {"texKey": "item_bone", "chance": 0.8},
-        {"texKey": "item_bow", "chance": 0.1}
+        {"itemKey": "bone", "chance": 0.8},
+        {"itemKey": "bow", "chance": 0.1}
     ],    
     "spawn": [
         {"biome": "stone", "chance": 0.015, "maxPerChunk": 1, "spawnTime": "night"},
@@ -59,8 +59,8 @@
     "color": "#cc4444", 
     "xpReward": 15,
     "drops": [
-        {"texKey": "item_fang", "chance": 0.5},
-        {"texKey": "item_leather", "chance": 0.4}
+        {"itemKey": "fang", "chance": 0.5},
+        {"itemKey": "leather", "chance": 0.4}
     ],
     "spawnChance": 0.010
 },
@@ -81,8 +81,8 @@
     "burnsInDay": true, 
     "xpReward": 50,
     "drops": [
-        {"texKey": "item_demon_heart", "chance": 0.4},
-        {"texKey": "item_ash", "chance": 0.7}
+        {"itemKey": "demon_heart", "chance": 0.4},
+        {"itemKey": "ash", "chance": 0.7}
     ],
     "spawnChance": 0.005
 },
@@ -103,8 +103,8 @@
     "burnsInDay": true, 
     "xpReward": 30,
     "drops": [
-        {"texKey": "item_fang", "chance": 0.5},
-        {"texKey": "item_potion", "chance": 0.2}
+        {"itemKey": "fang", "chance": 0.5},
+        {"itemKey": "potion", "chance": 0.2}
     ],
     "spawnChance": 0.010
 },
@@ -124,8 +124,8 @@
     "color": "#222244", 
     "xpReward": 35,
     "drops": [
-        {"texKey": "item_dark_dust", "chance": 0.6},
-        {"texKey": "item_soul", "chance": 0.3}
+        {"itemKey": "dark_dust", "chance": 0.6},
+        {"itemKey": "soul", "chance": 0.3}
     ],
     "spawnChance": 0.006
 },
@@ -143,8 +143,8 @@
     "burnsInDay": false, 
     "xpReward": 18,
     "drops": [
-        {"texKey": "item_imp_horn", "chance": 0.5},
-        {"texKey": "item_sulfur", "chance": 0.4}
+        {"itemKey": "imp_horn", "chance": 0.5},
+        {"itemKey": "sulfur", "chance": 0.4}
     ],
     "spawnChance": 0.004,
     "spawn": [
@@ -164,12 +164,12 @@
     "moveDelay": 350, 
     "chaseRange": 5, 
     "attackRange": 1, 
-    "attackCD": 450,
+    "attackCD": 900,
     "color": "#888", 
     "xpReward": 12,
     "drops": [
-        {"texKey": "item_wolf_pelt", "chance": 0.5},
-        {"texKey": "item_fang", "chance": 0.6}
+        {"itemKey": "wolf_pelt", "chance": 0.5},
+        {"itemKey": "fang", "chance": 0.6}
     ],
     "spawn": [
         {"biome": "forest", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"},
@@ -192,8 +192,8 @@
     "color": "#6b4c2b", 
     "xpReward": 15,
     "drops": [
-        {"texKey": "item_boar_pelt", "chance": 0.5},
-        {"texKey": "item_meat", "chance": 0.7}
+        {"itemKey": "boar_pelt", "chance": 0.5},
+        {"itemKey": "meat", "chance": 0.7}
     ],
     "spawn": [
         {"biome": "mixed_forest", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"},
@@ -214,8 +214,8 @@
     "color": "#444444", 
     "xpReward": 12,
     "drops": [
-        {"texKey": "item_web","chance": 0.7},
-        {"texKey": "item_venom_fang", "chance": 0.3}
+        {"itemKey": "web","chance": 0.7},
+        {"itemKey": "venom_fang", "chance": 0.3}
     ],
     "spawn": [
         {"biome": "forest", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"},
@@ -237,8 +237,8 @@
     "color": "#137400", 
     "xpReward": 12,
     "drops": [
-        {"texKey": "item_leather", "chance": 0.5},
-        {"texKey": "item_venom_fang", "chance": 0.4}
+        {"itemKey": "leather", "chance": 0.5},
+        {"itemKey": "venom_fang", "chance": 0.4}
     ],
     "spawn": [
         {"biome": "sand", "chance": 0.005, "maxPerChunk": 1, "spawnTime": "any"},
@@ -268,7 +268,7 @@
     "hp": 12, 
     "color": "#c4a46c",
     "drops": [
-        {"itemKey": "item_venison", "chance": 1.0, "count": 1}
+        {"itemKey": "venison", "chance": 1.0, "count": 1}
     ],
     "xpReward": 8,
     "fleeFrom": ["wolf"],
@@ -290,7 +290,7 @@
     "hp": 5, 
     "color": "#ccc",
     "drops": [
-        {"itemKey": "item_rabbit_meat", "chance": 1.0, "count": 1}
+        {"itemKey": "rabbit_meat", "chance": 1.0, "count": 1}
     ],
     "xpReward": 3,
     "fleeFrom": ["wolf","snake"],
@@ -308,7 +308,7 @@
     "color": "#fff",
     "xpReward": 2, 
     "drops": [
-        {"itemKey": "item_egg", "chance": 1.0, "count": 1}
+        {"itemKey": "egg", "chance": 1.0, "count": 1}
     ],
     "spawn": [
         {"biome": "grass", "chance": 0.010, "maxPerChunk": 1, "spawnTime": "any"},

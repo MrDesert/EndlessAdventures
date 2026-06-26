@@ -1,35 +1,35 @@
 {
   "campfire": {
-    "result": {"itemKey": "item_campfire", "count": 1},
+    "result": {"itemKey": "campfire", "count": 1},
     "ingredients": [
-      {"itemKey": "item_wood", "count": 2},
-      {"itemKey": "item_stick", "count": 1}
+      {"itemKey": "wood", "count": 2},
+      {"itemKey": "stick", "count": 3}
     ],
     "placeable": true,
     "lightRadius": 4
   },
   "torch": {
-    "result": {"itemKey": "item_torch", "count": 1},
+    "result": {"itemKey": "torch", "count": 1},
     "ingredients": [
-      {"itemKey": "item_stick", "count": 1},
-      {"itemKey": "item_resin", "count": 1}
+      {"itemKey": "stick", "count": 1},
+      {"itemKey": "resin", "count": 1}
     ],
     "placeable": true,
     "lightRadius": 2
   },
   "chest": {
-    "result": {"itemKey": "item_chest", "count": 1},
+    "result": {"itemKey": "chest", "count": 1},
     "ingredients": [
-      {"itemKey": "item_wood", "count": 4}
+      {"itemKey": "wood", "count": 4}
     ],
     "placeable": true,
     "isChest": true
   },
   "tent": {
-    "result": {"itemKey": "item_tent", "count": 1},
+    "result": {"itemKey": "tent", "count": 1},
     "ingredients": [
-      {"itemKey": "item_wood", "count": 3},
-      {"itemKey": "item_wolf_pelt", "count": 2}
+      {"itemKey": "wood", "count": 3},
+      {"itemKey": "wolf_pelt", "count": 2}
     ],
     "placeable": true,
     "isTent": true

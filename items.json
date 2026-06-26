@@ -69,25 +69,57 @@
     "emoji": "🐗",
     "texKey": "item_boar_pelt"
   },
-  "meat": {
-    "name": "Мясо",
-    "emoji": "🥩",
-    "texKey": "item_meat"
+    "meat": {
+    "name": "🥩 Мясо", 
+    "emoji": "🥩", 
+    "texKey": "item_meat",
+    "edible": { "heal": 7 },
+    "cook": { "time": 10000, "result": "cooked_meat" }
+  },
+  "cooked_meat": {
+    "name": "🥩 Жареное мясо", 
+    "emoji": "🥩", 
+    "texKey": "item_cooked_meat",
+    "edible": { "heal": 20 }
   },
   "venison": {
-    "name": "Оленина",
-    "emoji": "🍖",
-    "texKey": "item_venison"
+    "name": "🍖 Оленина", 
+    "emoji": "🍖", 
+    "texKey": "item_venison",
+    "edible": { "heal": 5 },
+    "cook": { "time": 10000, "result": "cooked_venison" }
+  },
+  "cooked_venison": {
+    "name": "🍖 Жареная оленина", 
+    "emoji": "🍖", 
+    "texKey": "item_cooked_venison",
+    "edible": { "heal": 15 }
   },
   "rabbit_meat": {
-    "name": "Крольчатина",
-    "emoji": "🍗",
-    "texKey": "item_rabbit_meat"
+    "name": "🍗 Крольчатина", 
+    "emoji": "🍗", 
+    "texKey": "item_rabbit_meat",
+    "edible": { "heal": 3 },
+    "cook": { "time": 8000, "result": "cooked_rabbit" }
+  },
+  "cooked_rabbit": {
+    "name": "🍗 Жареная крольчатина", 
+    "emoji": "🍗", 
+    "texKey": "item_cooked_rabbit",
+    "edible": { "heal": 8 }
   },
   "egg": {
-    "name": "Яйцо",
-    "emoji": "🍳",
-    "texKey": "item_egg"
+    "name": "🍳 Яйцо", 
+    "emoji": "🍳", 
+    "texKey": "item_egg",
+    "edible": { "heal": 5 },
+    "cook": { "time": 5000, "result": "cooked_egg" }
+  },
+  "cooked_egg": {
+    "name": "🍳 Жареное яйцо", 
+    "emoji": "🍳", 
+    "texKey": "item_cooked_egg",
+    "edible": { "heal": 12 }
   },
   "web": {
     "name": "Паутина",
@@ -99,94 +131,110 @@
     "emoji": "🦷",
     "texKey": "item_venom_fang"
   },
-  "item_wood": {
+  "wood": {
     "name": "Древесина",
     "emoji": "🪵",
-    "texKey": "item_wood"
+    "texKey": "item_wood",
+    "fuel": { "time": 30000 }
   },
-  "item_stick": {
+  "stick": {
     "name": "Палка",
     "emoji": "🥢",
-    "texKey": "item_stick"
+    "texKey": "item_stick",
+    "fuel": { "time": 12000 }
   },
-  "item_resin": {
+  "resin": {
     "name": "Смола",
     "emoji": "🟤",
     "texKey": "item_resin"
   },
-  "item_rock": {
+  "rock": {
     "name": "Булыжник",
     "emoji": "🪨",
     "texKey": "item_rock"
   },
-  "item_flint": {
+  "flint": {
     "name": "Кремень",
     "emoji": "💎",
     "texKey": "item_flint"
   },
-  "item_iron_ore": {
+  "iron_ore": {
     "name": "Железная руда",
     "emoji": "⛏️",
     "texKey": "item_iron_ore"
   },
-  "item_gold_nugget": {
+  "gold_nugget": {
     "name": "Золотой самородок",
     "emoji": "🌟",
     "texKey": "item_gold_nugget"
   },
-  "item_cactus": {
+  "cactus": {
     "name": "Кактус",
     "emoji": "🌵",
     "texKey": "item_cactus"
   },
-  "item_water": {
+  "water": {
     "name": "Вода",
     "emoji": "💧",
     "texKey": "item_water"
   },
-  "item_snowball": {
+  "snowball": {
     "name": "Снежок",
     "emoji": "❄️",
     "texKey": "item_snowball"
   },
-  "item_ice": {
+  "ice": {
     "name": "Лёд",
     "emoji": "🧊",
     "texKey": "item_ice"
   },
-  "item_fiber": {
+  "fiber": {
     "name": "Волокно",
     "emoji": "🧵",
     "texKey": "item_fiber"
   },
-  "item_wheat": {
+  "wheat": {
     "name": "Пшеница",
     "emoji": "🌾",
     "texKey": "item_wheat"
   },
-  "item_seeds": {
+  "seeds": {
     "name": "Семена",
     "emoji": "🌱",
     "texKey": "item_seeds"
   },
-    "item_campfire": {
-    "name": "🔥 Костёр",
-    "emoji": "🔥",
-    "texKey": "item_campfire"
-  },
-  "item_torch": {
-    "name": "🕯️ Факел",
-    "emoji": "🕯️",
-    "texKey": "item_torch"
-  },
-  "item_chest": {
-    "name": "📦 Сундук",
-    "emoji": "📦",
-    "texKey": "item_chest"
-  },
-  "item_tent": {
-    "name": "⛺ Палатка",
-    "emoji": "⛺",
-    "texKey": "item_tent"
-  }
+  "campfire": {
+  "name": "🔥 Костёр", 
+  "emoji": "🔥", 
+  "texKey": "item_campfire",
+  "placeable": true, 
+  "placeKey": "campfire", 
+  "placeColor": "#ff6600", 
+  "lightRadius": 4
+},
+"torch": {
+  "name": "🕯️ Факел", 
+  "emoji": "🕯️", 
+  "texKey": "item_torch",
+  "placeable": true, 
+  "placeKey": "torch", 
+  "placeColor": "#ffaa00", 
+  "lightRadius": 2
+},
+"chest": {
+  "name": "📦 Сундук", 
+  "emoji": "📦", 
+  "texKey": "item_chest",
+  "placeable": true, 
+  "placeKey": "chest", 
+  "placeColor": "#8B4513"
+},
+"tent": {
+  "name": "⛺ Палатка", 
+  "emoji": "⛺", 
+  "texKey": "item_tent",
+  "placeable": true, 
+  "placeKey": "tent", 
+  "placeColor": "#a08860"
+}
 }

@@ -2,58 +2,59 @@
   "tree": {
     "name": "Дерево", "texKey": "tree", "hp": 20, "color": "#6b4c2b", "h": 14,
     "drops": [
-      {"itemKey": "item_wood", "chance": 1.0, "count": 2},
-      {"itemKey": "item_stick", "chance": 0.5, "count": 1}
+        {"itemKey": "wood", "chance": 1.0, "count": 1},
+        {"itemKey": "wood", "chance": 0.5, "count": 2},
+        {"itemKey": "stick", "chance": 0.8, "count": 1}
     ]
   },
   "pine": {
     "name": "Сосна", "texKey": "pine", "hp": 25, "color": "#3a6b2f", "h": 16,
     "drops": [
-      {"itemKey": "item_wood", "chance": 1.0, "count": 3},
-      {"itemKey": "item_resin", "chance": 0.4, "count": 1}
+      {"itemKey": "wood", "chance": 1.0, "count": 3},
+      {"itemKey": "resin", "chance": 0.4, "count": 1}
     ]
   },
   "stone": {
     "name": "Камень", "texKey": "stone", "hp": 30, "color": "#888", "h": 8,
     "drops": [
-      {"itemKey": "item_rock", "chance": 1.0, "count": 2},
-      {"itemKey": "item_flint", "chance": 0.3, "count": 1}
+      {"itemKey": "rock", "chance": 1.0, "count": 2},
+      {"itemKey": "flint", "chance": 0.3, "count": 1}
     ]
   },
   "ore": {
     "name": "Руда", "texKey": "ore", "hp": 40, "color": "#5b9bd5", "h": 9,
     "drops": [
-      {"itemKey": "item_iron_ore", "chance": 1.0, "count": 2},
-      {"itemKey": "item_gold_nugget", "chance": 0.1, "count": 1}
+      {"itemKey": "iron_ore", "chance": 1.0, "count": 2},
+      {"itemKey": "gold_nugget", "chance": 0.1, "count": 1}
     ]
   },
   "cactus": {
     "name": "Кактус", "texKey": "cactus", "hp": 15, "color": "#5a8a3a", "h": 12,
     "drops": [
-      {"itemKey": "item_cactus", "chance": 1.0, "count": 1},
-      {"itemKey": "item_water", "chance": 0.5, "count": 1}
+      {"itemKey": "cactus", "chance": 1.0, "count": 1},
+      {"itemKey": "water", "chance": 0.5, "count": 1}
     ]
   },
   "snow_tree": {
     "name": "Заснеженное дерево", "texKey": "snow_tree", "hp": 25, "color": "#d0d8e0", "h": 14,
     "drops": [
-      {"itemKey": "item_wood", "chance": 1.0, "count": 2},
-      {"itemKey": "item_stick", "chance": 0.5, "count": 1},
-      {"itemKey": "item_snowball", "chance": 0.6, "count": 1}
+      {"itemKey": "wood", "chance": 1.0, "count": 2},
+      {"itemKey": "stick", "chance": 0.5, "count": 1},
+      {"itemKey": "snowball", "chance": 0.6, "count": 1}
     ]
   },
   "ice_rock": {
     "name": "Ледяной камень", "texKey": "stone", "hp": 35, "color": "#c8d8f0", "h": 8,
     "drops": [
-      {"itemKey": "item_rock", "chance": 0.5, "count": 2},
-      {"itemKey": "item_ice", "chance": 0.5, "count": 1}
+      {"itemKey": "rock", "chance": 0.5, "count": 2},
+      {"itemKey": "ice", "chance": 0.5, "count": 1}
     ]
   },
   "bush": {
     "name": "🌿 Куст", "texKey": null, "hp": 10, "color": "#5a8a3a", "h": 6,
     "drops": [
-      {"itemKey": "item_stick", "chance": 1.0, "count": 1},
-      {"itemKey": "item_fiber", "chance": 0.5, "count": 1}
+      {"itemKey": "stick", "chance": 1.0, "count": 1},
+      {"itemKey": "fiber", "chance": 0.5, "count": 1}
     ]
   },
   "wheat": {
@@ -63,8 +64,8 @@
     "color": "#d4c47c", 
     "h": 8,
     "drops": [
-      {"itemKey": "item_wheat", "chance": 1.0, "count": 1},
-      {"itemKey": "item_seeds", "chance": 0.5, "count": 1}
+      {"itemKey": "wheat", "chance": 1.0, "count": 1},
+      {"itemKey": "seeds", "chance": 0.5, "count": 1}
     ]
   },
   "cave_entrance": {
