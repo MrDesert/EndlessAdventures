@@ -155,14 +155,12 @@
 },
 "wolf": {
     "name": "Волк", 
+    "category": "animal",
     "texKey": "monster_wolf", 
-    "type": "neutral",
     "aggroChance": 0.3, 
-    "huntTargets": ["rabbit","chicken","deer"],
     "hp": 22, 
     "damage": 9, 
     "moveDelay": 350, 
-    "chaseRange": 5, 
     "attackRange": 1, 
     "attackCD": 900,
     "color": "#888", 
@@ -176,7 +174,57 @@
         {"biome": "mixed_forest", "chance": 0.005, "maxPerChunk": 1, "spawnTime": "any"},
         {"biome": "taiga", "chance": 0.008, "maxPerChunk": 1, "spawnTime": "any"},
         {"biome": "snow", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"}
-    ]
+    ],
+    "behavior": {
+        "default": 
+            {"type": "neutral", "defendRange": 3, "chaseRange": 5, "forgetTime": 3000, "fleeRange": 8},
+        "hunt": [
+            {
+            "target": "rabbit",
+            "priority": 1,
+            "detectRange": 6,
+            "chaseRange": 14,
+            "forgetTime": 4000,
+            "time": "any"
+            },
+            {
+            "target": "chicken",
+            "priority": 2,
+            "detectRange": 5,
+            "chaseRange": 12,
+            "forgetTime": 3000,
+            "time": "any"
+            },
+            {
+            "target": "deer",
+            "priority": 3,
+            "detectRange": 8,
+            "chaseRange": 16,
+            "forgetTime": 5000,
+            "time": "any"
+            }
+        ],
+        "flee": [
+            {
+            "target": "bear",
+            "detectRange": 7,
+            "safeRange": 12,
+            "time": "any"
+            }
+        ],
+        "defend": [
+        {
+      "target": "player",
+      "defendRange": 3,
+      "time": "any"
+    },
+    {
+      "target": "boar",
+      "defendRange": 4,
+      "time": "any"
+    }
+  ]
+}
 },
 "boar": {
     "name": "Кабан", 

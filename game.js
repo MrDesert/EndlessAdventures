@@ -282,7 +282,6 @@ function openCampfireUI(entity) {
         '<div style="font-size:24px;">→</div>' +
         '<div id="cook-progress" style="width:40px;height:50px;background:#333;border-radius:8px;position:relative;overflow:hidden;">' +
           '<div id="cook-progress-fill" style="position:absolute;bottom:0;width:100%;height:0%;background:#ff6600;transition:height 0.3s;"></div>' +
-          '<span id="cook-progress-text" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:#fff;">0%</span>' +
         '</div>' +
         '<div style="font-size:24px;">→</div>' +
         '<div><p style="font-size:12px;color:#aaa;">Готовое</p><div id="cook-output" style="width:50px;height:50px;background:rgba(255,255,255,0.1);border:2px solid #888;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;"></div></div>' +
@@ -1091,6 +1090,7 @@ entities.push(createEntity({
       color: mob.color,
       burnsInDay: mob.burnsInDay || false,
       neutral: mob.type === 'neutral',
+      category: mob.category || null,
       _isAggressive: Math.random() < (mob.aggroChance || 0),
       huntTargets: mob.huntTargets || null,
       fleeFrom: mob.fleeFrom || null,
@@ -1260,7 +1260,6 @@ function updateAI(e, dt, isPeaceful) {
     let dist = Math.sqrt(ddx * ddx + ddy * ddy);
     if (dist <= speed) { e.rx = e.tx; e.ry = e.ty; }
     else { e.rx += (ddx / dist) * speed; e.ry += (ddy / dist) * speed; }
-    // Сохраняем направление
     if (dist > 0.001) {
       e._lastDDX = ddx;
       e._lastDDY = ddy;
@@ -1268,15 +1267,17 @@ function updateAI(e, dt, isPeaceful) {
   }
   
   // Убегание при низком HP для animal
-  if (!e.fleeTimer && e.category === 'animal') {
+if (!e.fleeTimer && e.category === 'animal') {
     let hpPercent = e.hp / (e.maxHp || e.hp);
     if ((e.type === 'peaceful' && e._wasAttacked) || hpPercent < 0.2) {
       e.fleeTimer = 3000;
       let attacker = e._lastAttacker || { tx: player.tx, ty: player.ty };
       e._fleeFrom = { tx: attacker.tx, ty: attacker.ty };
       ai.state = 'flee';
+      ai._hunting = null; // ← ДОБАВЬ ЭТО
+      e._wasAttacked = false; // ← ДОБАВЬ ЭТО
     }
-  }
+}
   
   // Проверка fleeFrom — для ВСЕХ
   if (!e.fleeTimer && e.fleeFrom) {
@@ -1370,6 +1371,21 @@ function updateAI(e, dt, isPeaceful) {
   if (shouldChase) { ai.state = 'chase'; ai.forgetTimer = 5000; }
   
   if (ai.state === 'chase') {
+    // Проверка низкого HP
+    if (e.category === 'animal') {
+      let hpPercent = e.hp / (e.maxHp || e.hp);
+      console.log('animal check', e.name, 'hp%', hpPercent, 'maxHp', e.maxHp, 'hp', e.hp);
+      if (hpPercent < 0.2) {
+        console.log('flee!', e.name);
+        e.fleeTimer = 3000;
+        e._fleeFrom = { tx: player.tx, ty: player.ty };
+        ai.state = 'flee';
+        ai._hunting = null;
+        e._wasAttacked = false;
+        return;
+      }
+    }
+    
     let target = ai._hunting || { tx: player.tx, ty: player.ty, hp: player.hp };
     let distToTarget = Math.sqrt((e.tx - target.tx) ** 2 + (e.ty - target.ty) ** 2);
     
@@ -1391,6 +1407,8 @@ function updateAI(e, dt, isPeaceful) {
           ai._hunting.fleeTimer = 2000;
           ai._hunting._wasAttacked = true;
           ai._hunting._lastAttacker = e;
+          ai._hunting._hurtAnim = Date.now();
+          e._attackAnim = Date.now();
           e.attackCooldown = e.attackCooldownTime;
           if (ai._hunting.hp <= 0) {
             ai._hunting.hp = -1;
@@ -1399,7 +1417,11 @@ function updateAI(e, dt, isPeaceful) {
             ai.state = 'idle';
           }
         } else {
-          player.hp -= e.damage; e.attackCooldown = e.attackCooldownTime;
+          if (!player.godMode) { player.hp -= e.damage; }
+          player._hurtAnim = Date.now();
+          player._hurtDir = { dx: -Math.sign(e.tx - player.tx), dy: -Math.sign(e.ty - player.ty) };
+          e._attackAnim = Date.now();
+          e.attackCooldown = e.attackCooldownTime;
           addLog('💥 ' + e.name + ' атакует! -' + e.damage + ' HP');
           if (player.hp <= 0) { player.hp = 0; addLog('☠️ ТЫ ПОГИБ...'); document.getElementById('death-screen').classList.add('active'); }
         }
@@ -1431,7 +1453,11 @@ function attackEntity(target) {
   player.attackCooldown = player.attackCooldownTime;
   target._lastHitByPlayer = true;
   
-  // Дроп с сущности
+  // Анимации
+  player._attackAnim = Date.now();
+  player._attackDir = { dx: Math.sign(target.tx - player.tx), dy: Math.sign(target.ty - player.ty) };
+  target._hurtAnim = Date.now();
+  
   function processDrops(drops, tx, ty) {
     if (!drops) return;
     for (let d = 0; d < drops.length; d++) {
@@ -1483,7 +1509,6 @@ function attackEntity(target) {
       target.deathTime = Date.now(); 
       target.fallAngle = (Math.random() - 0.5) * 1.0;
       target.fallDirection = Math.random() > 0.5 ? 1 : -1;
-      // Хил от первого дропа
       if (target.drops && target.drops.length > 0) {
         let itemData = ALL_ITEMS[target.drops[0].itemKey];
         if (itemData && itemData.edible && itemData.edible.heal) {
@@ -1511,7 +1536,15 @@ function attackEntity(target) {
   }
   if (target.ai) { target.ai.state = 'chase'; target.ai.forgetTimer = 5000; }
   if (dist <= target.attackRange && target.attackCooldown <= 100) {
-    setTimeout(function() { if (target.hp > 0 && player.hp > 0) { player.hp -= target.damage; player.attackCooldown = 400; addLog('💥 ' + target.name + ' бьёт в ответ! -' + target.damage + ' HP'); if (player.hp <= 0) { player.hp = 0; addLog('☠️ ТЫ ПОГИБ...'); document.getElementById('death-screen').classList.add('active'); } } }, 250);
+    setTimeout(function() { if (target.hp > 0 && player.hp > 0 && !player.godMode) { 
+      if (!player.godMode) { player.hp -= target.damage; }
+      player.attackCooldown = 400; 
+      player._hurtAnim = Date.now();
+      player._hurtDir = { dx: -Math.sign(target.tx - player.tx), dy: -Math.sign(target.ty - player.ty) };
+      target._attackAnim = Date.now();
+      addLog('💥 ' + target.name + ' бьёт в ответ! -' + target.damage + ' HP'); 
+      if (player.hp <= 0) { player.hp = 0; addLog('☠️ ТЫ ПОГИБ...'); document.getElementById('death-screen').classList.add('active'); } 
+    } }, 250);
   }
 }
 
@@ -1957,12 +1990,33 @@ function drawEntityCode(e){
     if(progress >= 1){ctx.restore();return;}
     ctx.globalAlpha = 1 - progress;
     
-    // Анимация падения
     if(e.fallAngle !== undefined){
       ctx.translate(pos.x, pos.y);
       ctx.rotate(e.fallAngle * progress * e.fallDirection);
       ctx.translate(-pos.x, -pos.y);
     }
+  }
+  
+  // Анимация атаки — рывок вперёд
+  if (e._attackAnim && Date.now() - e._attackAnim < 150) {
+    let progress = 1 - (Date.now() - e._attackAnim) / 150;
+    let offset = progress * 5 * zoom;
+    let ddx = e._lastDDX || 0;
+    let ddy = e._lastDDY || 0;
+    let len = Math.sqrt(ddx*ddx + ddy*ddy);
+    if (len > 0) {
+      pos.x += (ddx/len) * offset;
+      pos.y += (ddy/len) * offset;
+    }
+  }
+  
+  // Анимация получения урона — белая вспышка
+  if (e._hurtAnim && Date.now() - e._hurtAnim < 200) {
+    let progress = 1 - (Date.now() - e._hurtAnim) / 200;
+    ctx.fillStyle = 'rgba(255,255,255,' + (progress * 0.5) + ')';
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y - h*0.3, (e.type==='monster'?6:5)*zoom, 0, Math.PI*2);
+    ctx.fill();
   }
   
   ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(pos.x,pos.y+2*zoom,6*zoom,3*zoom,0,0,Math.PI*2);ctx.fill();
@@ -2044,12 +2098,33 @@ function drawEntityTex(e){
   
   let iw=img.width,ih=img.height,scale=(h*1.2)/ih,dw=iw*scale*zoom,dh=ih*scale*zoom,topY=pos.y-h;
   
+  // Анимация атаки — рывок вперёд
+  if (e._attackAnim && Date.now() - e._attackAnim < 150) {
+    let progress = 1 - (Date.now() - e._attackAnim) / 150;
+    let offset = progress * 5 * zoom;
+    let ddx = e._lastDDX || 0;
+    let ddy = e._lastDDY || 0;
+    let len = Math.sqrt(ddx*ddx + ddy*ddy);
+    if (len > 0) {
+      pos.x += (ddx/len) * offset;
+      pos.y += (ddy/len) * offset;
+    }
+  }
+  
+  // Анимация получения урона — белая вспышка
+  if (e._hurtAnim && Date.now() - e._hurtAnim < 200) {
+    let progress = 1 - (Date.now() - e._hurtAnim) / 200;
+    ctx.fillStyle = 'rgba(255,255,255,' + (progress * 0.5) + ')';
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y - h*0.3, dw*0.45, 0, Math.PI*2);
+    ctx.fill();
+  }
+  
   if((e.type==='monster'||e.type==='peaceful')&&e.attackCooldown>0&&Math.floor(e.attackCooldown/100)%2===0)ctx.globalAlpha=0.5;
   
   ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();
   ctx.ellipse(pos.x,pos.y+2*zoom,dw*0.35,dh*0.12,0,0,Math.PI*2);ctx.fill();
   
-  // Зеркалирование
   let shouldFlip = e._flipped || false;
   if (e._lastDDX !== undefined && (e._lastDDX !== 0 || e._lastDDY !== 0)) {
     shouldFlip = (e._lastDDX > 0 || e._lastDDY < 0);
@@ -2064,9 +2139,8 @@ function drawEntityTex(e){
   ctx.drawImage(img,pos.x-dw/2,pos.y-dh,dw,dh);
   ctx.globalAlpha=1;
   
-  ctx.restore(); // Закрываем — зеркалирование больше не действует
+  ctx.restore();
   
-  // HP бар и имя — без зеркалирования
   let dx=mouseX-pos.x,dy=mouseY-(pos.y-h+h*0.4),dist=Math.sqrt(dx*dx+dy*dy);
   
   if(dist<30*zoom){
@@ -2091,8 +2165,40 @@ function drawEntityTex(e){
 }
 
 function drawPlayerCode(){
-    let pos=tileToScreen(player.rx,player.ry),h=16*zoom,topY=pos.y-h;ctx.save();
+    let pos=tileToScreen(player.rx,player.ry),h=16*zoom,topY=pos.y-h;
+    
+    // Анимация атаки — рывок вперёд
+    if (player._attackAnim && Date.now() - player._attackAnim < 150) {
+      let progress = 1 - (Date.now() - player._attackAnim) / 150;
+      let offset = progress * 6 * zoom;
+      if (player._attackDir) {
+        pos.x += player._attackDir.dx * offset;
+        pos.y += player._attackDir.dy * offset;
+      }
+    }
+    
+    // Анимация получения урона — отбрасывание
+    if (player._hurtAnim && Date.now() - player._hurtAnim < 200) {
+      let progress = 1 - (Date.now() - player._hurtAnim) / 200;
+      let offset = progress * 4 * zoom;
+      if (player._hurtDir) {
+        pos.x += player._hurtDir.dx * offset;
+        pos.y += player._hurtDir.dy * offset;
+      }
+    }
+    
+    ctx.save();
     if(player.attackCooldown>0&&Math.floor(player.attackCooldown/100)%2===0)ctx.globalAlpha=0.5;
+    
+    // Красная вспышка при уроне
+    if (player._hurtAnim && Date.now() - player._hurtAnim < 200) {
+      let progress = 1 - (Date.now() - player._hurtAnim) / 200;
+      ctx.fillStyle = 'rgba(255,0,0,' + (progress * 0.6) + ')';
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y - 6*zoom, 12*zoom, 0, Math.PI*2);
+      ctx.fill();
+    }
+    
     ctx.fillStyle='rgba(0,0,0,0.4)';
     ctx.beginPath();
     ctx.ellipse(pos.x,pos.y+2*zoom,7*zoom,4*zoom,0,0,Math.PI*2);
@@ -2120,24 +2226,24 @@ function drawPlayerCode(){
     ctx.fillStyle='#ff0';
     ctx.fillRect(pos.x+5*zoom,topY+h*0.45,3*zoom,2.5*zoom);
     ctx.globalAlpha=1;
-    // Кулдаун-бар атаки
-if (player.attackCooldown > 0) {
-  let cdPct = player.attackCooldown / player.attackCooldownTime;
-  let cdBarW = 16 * zoom;
-  let cdBarH = 3 * zoom;
-  let cdBarX = pos.x - cdBarW / 2;
-  let cdBarY = topY - 10 * zoom;
-  
-  ctx.fillStyle = '#1a1a3a';
-  ctx.fillRect(cdBarX, cdBarY, cdBarW, cdBarH);
-  ctx.fillStyle = '#4488ff';
-  ctx.fillRect(cdBarX, cdBarY, cdBarW * cdPct, cdBarH);
-  
-  ctx.strokeStyle = '#6688cc';
-  ctx.lineWidth = 0.5;
-  ctx.strokeRect(cdBarX, cdBarY, cdBarW, cdBarH);
+    
+    if (player.attackCooldown > 0) {
+      let cdPct = player.attackCooldown / player.attackCooldownTime;
+      let cdBarW = 16 * zoom;
+      let cdBarH = 3 * zoom;
+      let cdBarX = pos.x - cdBarW / 2;
+      let cdBarY = topY - 10 * zoom;
+      ctx.fillStyle = '#1a1a3a';
+      ctx.fillRect(cdBarX, cdBarY, cdBarW, cdBarH);
+      ctx.fillStyle = '#4488ff';
+      ctx.fillRect(cdBarX, cdBarY, cdBarW * cdPct, cdBarH);
+      ctx.strokeStyle = '#6688cc';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(cdBarX, cdBarY, cdBarW, cdBarH);
+    }
+    ctx.restore();
 }
-    ctx.restore();}
+
 function drawPlayerTex(){
     let img=getTex('player');
     if(!img || !settings.showTextures){
@@ -2145,31 +2251,60 @@ function drawPlayerTex(){
         return;
     }
     let pos=tileToScreen(player.rx,player.ry),h=16*zoom,iw=img.width,ih=img.height,scale=(h*1.5)/ih,dw=iw*scale*zoom,dh=ih*scale*zoom,topY=pos.y-h;
+    
+    // Анимация атаки — рывок вперёд
+    if (player._attackAnim && Date.now() - player._attackAnim < 150) {
+      let progress = 1 - (Date.now() - player._attackAnim) / 150;
+      let offset = progress * 6 * zoom;
+      if (player._attackDir) {
+        pos.x += player._attackDir.dx * offset;
+        pos.y += player._attackDir.dy * offset;
+      }
+    }
+    
+    // Анимация получения урона — отбрасывание
+    if (player._hurtAnim && Date.now() - player._hurtAnim < 200) {
+      let progress = 1 - (Date.now() - player._hurtAnim) / 200;
+      let offset = progress * 4 * zoom;
+      if (player._hurtDir) {
+        pos.x += player._hurtDir.dx * offset;
+        pos.y += player._hurtDir.dy * offset;
+      }
+    }
+    
     ctx.save();
     if(player.attackCooldown>0&&Math.floor(player.attackCooldown/100)%2===0)ctx.globalAlpha=0.5;
+    
+    // Красная вспышка при уроне
+    if (player._hurtAnim && Date.now() - player._hurtAnim < 200) {
+      let progress = 1 - (Date.now() - player._hurtAnim) / 200;
+      ctx.fillStyle = 'rgba(255,0,0,' + (progress * 0.6) + ')';
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y - 6*zoom, 12*zoom, 0, Math.PI*2);
+      ctx.fill();
+    }
+    
     ctx.fillStyle='rgba(0,0,0,0.4)';
     ctx.beginPath();
     ctx.ellipse(pos.x,pos.y+2*zoom,dw*0.35,dh*0.12,0,0,Math.PI*2);
     ctx.fill();
     ctx.drawImage(img,pos.x-dw/2,topY-dh+h,dw,dh);
     ctx.globalAlpha=1;
-    // Кулдаун-бар атаки
-if (player.attackCooldown > 0) {
-  let cdPct = player.attackCooldown / player.attackCooldownTime;
-  let cdBarW = 16 * zoom;
-  let cdBarH = 3 * zoom;
-  let cdBarX = pos.x - cdBarW / 2;
-  let cdBarY = topY - 10 * zoom;
-  
-  ctx.fillStyle = '#1a1a3a';
-  ctx.fillRect(cdBarX, cdBarY, cdBarW, cdBarH);
-  ctx.fillStyle = '#4488ff';
-  ctx.fillRect(cdBarX, cdBarY, cdBarW * cdPct, cdBarH);
-  
-  ctx.strokeStyle = '#6688cc';
-  ctx.lineWidth = 0.5;
-  ctx.strokeRect(cdBarX, cdBarY, cdBarW, cdBarH);
-}
+    
+    if (player.attackCooldown > 0) {
+      let cdPct = player.attackCooldown / player.attackCooldownTime;
+      let cdBarW = 16 * zoom;
+      let cdBarH = 3 * zoom;
+      let cdBarX = pos.x - cdBarW / 2;
+      let cdBarY = topY - 10 * zoom;
+      ctx.fillStyle = '#1a1a3a';
+      ctx.fillRect(cdBarX, cdBarY, cdBarW, cdBarH);
+      ctx.fillStyle = '#4488ff';
+      ctx.fillRect(cdBarX, cdBarY, cdBarW * cdPct, cdBarH);
+      ctx.strokeStyle = '#6688cc';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(cdBarX, cdBarY, cdBarW, cdBarH);
+    }
     ctx.restore();
 }
 
@@ -2193,17 +2328,14 @@ function render(){
   if(alpha>0){
     ctx.save();
     
-    // Offscreen canvas для маски
     let nightCanvas = document.createElement('canvas');
     nightCanvas.width = W;
     nightCanvas.height = H;
     let nctx = nightCanvas.getContext('2d');
     
-    // Заливаем всё темнотой
     nctx.fillStyle = 'rgba(5,5,30,'+(alpha*0.7)+')';
     nctx.fillRect(0,0,W,H);
     
-    // Вырезаем свет от костров
     nctx.globalCompositeOperation = 'destination-out';
     for(let i=0;i<objs.entities.length;i++){
       let e=objs.entities[i];
@@ -2223,23 +2355,50 @@ function render(){
       }
     }
     
-    // Рисуем темноту с вырезанными областями
     ctx.drawImage(nightCanvas,0,0);
     
-    // Звёзды
     if(alpha>0.5){ctx.fillStyle='rgba(255,255,255,'+((alpha-0.5)*2*0.4)+')';for(let i=0;i<50;i++){ctx.beginPath();ctx.arc(hash(i*13,Math.floor(cycleTime/1000))*W,hash(i*17,Math.floor(cycleTime/1000)+50)*H,0.5+hash(i,99)*1.5,0,Math.PI*2);ctx.fill();}}
     
     ctx.restore();
   }
   
-  let grad=ctx.createRadialGradient(W/2,H/2,W*0.3,W/2,H/2,W*0.75);grad.addColorStop(0,'rgba(0,0,0,0)');grad.addColorStop(1,'rgba(0,0,0,0.25)');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  // Туман по краям экрана
+  let fogWidth = 40 * zoom;
+  
+  // Верх
+  let topGrad = ctx.createLinearGradient(0, 0, 0, fogWidth);
+  topGrad.addColorStop(0, 'rgba(180, 190, 210, 0.2)');
+  topGrad.addColorStop(1, 'rgba(180, 190, 210, 0)');
+  ctx.fillStyle = topGrad;
+  ctx.fillRect(0, 0, W, fogWidth);
+  
+  // Низ
+  let bottomGrad = ctx.createLinearGradient(0, H, 0, H - fogWidth);
+  bottomGrad.addColorStop(0, 'rgba(180, 190, 210, 0.2)');
+  bottomGrad.addColorStop(1, 'rgba(180, 190, 210, 0)');
+  ctx.fillStyle = bottomGrad;
+  ctx.fillRect(0, H - fogWidth, W, fogWidth);
+  
+  // Лево
+  let leftGrad = ctx.createLinearGradient(0, 0, fogWidth, 0);
+  leftGrad.addColorStop(0, 'rgba(180, 190, 210, 0.2)');
+  leftGrad.addColorStop(1, 'rgba(180, 190, 210, 0)');
+  ctx.fillStyle = leftGrad;
+  ctx.fillRect(0, 0, fogWidth, H);
+  
+  // Право
+  let rightGrad = ctx.createLinearGradient(W, 0, W - fogWidth, 0);
+  rightGrad.addColorStop(0, 'rgba(180, 190, 210, 0.2)');
+  rightGrad.addColorStop(1, 'rgba(180, 190, 210, 0)');
+  ctx.fillStyle = rightGrad;
+  ctx.fillRect(W - fogWidth, 0, fogWidth, H);
+  
   let tod=getTimeOfDay();document.getElementById('time-indicator').textContent=(tod==='day'?'☀️':'🌙')+' '+(tod==='day'?'День':'Ночь')+' '+Math.floor(getDayProgress()*100)+'%';
   document.getElementById('coords').textContent='XY: '+Math.round(player.rx)+', '+Math.round(player.ry)+'; Biome: '+getTile(player.tx, player.ty).biome;
   updateDebugPanel();
   updatePlayerStats();
   updateInventoryUI();
 }
-
 // Управление
 let keys={};
 window.addEventListener('keydown',function(e){
