@@ -1,0 +1,90 @@
+{
+  "water": {
+    "name": "💧 Вода", "base": 1, "color": "#2a5a8a", "textureKey": "tile_water",
+    "priority": 100, "canBlend": false,
+    "condition": "w > 0.62"
+  },
+  "snow": {
+    "name": "❄️ Снежная тайга", "base": 5, "color": "#e8e8f0", "textureKey": "tile_snow",
+    "priority": 90, "canBlend": true,
+    "condition": "t < 0.25",
+    "colorBy": "temperature",
+    "resources": {
+      "snow_tree": { "chance": 0.22, "type": "snow_tree" },
+      "ice_rock": { "chance": 0.30, "type": "ice_rock", "minChance": 0.22 },
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+    }
+  },
+  "taiga": {
+    "name": "🌲 Тайга", "base": 7, "color": "#4a7050", "textureKey": "tile_grass",
+    "priority": 80, "canBlend": true,
+    "condition": "t >= 0.25 && t < 0.38",
+    "colorBy": "temperature",
+    "resources": {
+      "pine": { "chance": 0.35, "type": "pine" },
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+    }
+  },
+  "sand": {
+    "name": "🏜️ Пустыня", "base": 2, "color": "#c4b47c", "textureKey": "tile_sand",
+    "priority": 70, "canBlend": true,
+    "condition": "t > 0.60 && h < 0.50",
+    "colorBy": "temperature",
+    "resources": {
+      "cactus": { "chance": 0.10, "type": "cactus" },
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+    }
+  },
+  "stone": {
+    "name": "🏔️ Горы", "base": 3, "color": "#6a6a6a", "textureKey": "tile_stone",
+    "priority": 60, "canBlend": false,
+    "condition": "t > 0.68 || (t > 0.50 && h < 0.30)",
+    "resources": {
+      "stone": { "chance": 0.14, "type": "stone" },
+      "ore": { "chance": 0.24, "type": "ore", "minChance": 0.14 },
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+    }
+  },
+  "mixed_forest": {
+    "name": "🌲🌲 Смешанный лес", "base": 6, "color": "#3a6a2a", "textureKey": "tile_grass",
+    "priority": 50, "canBlend": true,
+    "condition": "h > 0.45 && h < 0.65",
+    "colorBy": "both",
+    "resources": {
+      "tree": { "chance": 0.18, "type": "tree" },
+      "pine": { "chance": 0.35, "type": "pine", "minChance": 0.18 },
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+    }
+  },
+  "forest": {
+    "name": "🌲 Лес", "base": 0, "color": "#3a6a2a", "textureKey": "tile_grass",
+    "priority": 40, "canBlend": true,
+    "condition": "h >= 0.65",
+    "colorBy": "humidity",
+    "resources": {
+      "tree": { "chance": 0.40, "type": "tree" },
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+    }
+  },
+  "grass": {
+    "name": "🌾 Равнина", "base": 0, "color": "#4a7a3a", "textureKey": "tile_grass",
+    "priority": 0, "canBlend": true,
+    "condition": "true",
+    "colorBy": "both",
+    "resources": {
+      "tree": { "chance": 0.06, "type": "tree" },
+      "bush": { "chance": 0.10, "type": "bush", "minChance": 0.06 },
+      "wheat": { "chance": 0.14, "type": "wheat", "minChance": 0.10 },
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+    }
+  },
+  "cave": {
+    "name": "🕳️ Пещера", "base": 3, "color": "#3a3a2a", "textureKey": "tile_stone",
+    "priority": 50, "canBlend": false,
+    "condition": "false",
+    "resources": {
+      "stone": { "chance": 0.06, "type": "stone" },
+      "ore": { "chance": 0.10, "type": "ore", "minChance": 0.06 }
+    }
+  }
+}

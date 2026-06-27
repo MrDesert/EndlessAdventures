@@ -12,22 +12,20 @@ let settings = {
   qualityPreset: 'medium'      // 'low', 'medium', 'high'
 };
 
+let TILE_HW, TILE_HH, FULL_CYCLE;
+
 // Кэш для объектов
 let cachedObjects = null;
 let cacheFrame = 0;
+// Кэш для getVisibleEntities (AI)
+let cachedVisibleEntities = null;
+let cachedVisibleEntitiesFrame = 0;
 let frameSkipCounter = 0;
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-// Изометрия
-const TILE_W = 64;
-const TILE_H = 32;
-const TILE_HW = TILE_W / 2;
-const TILE_HH = TILE_H / 2;
-
 // Чанки
-const CHUNK_SIZE = 8;
 let chunks = {};
 
 // Сид
@@ -51,125 +49,26 @@ canvas.addEventListener('mousemove', function(e) {
 let paused = false;
 
 // День/ночь
-const DAY_DURATION = 5 * 60 * 1000;
-const NIGHT_DURATION = 5 * 60 * 1000;
-const FULL_CYCLE = DAY_DURATION + NIGHT_DURATION;
-let cycleTime = DAY_DURATION * 0.1;
+let cycleTime;
 let lastTod = 'day';
 
-function getTimeOfDay() { return cycleTime < DAY_DURATION ? 'day' : 'night'; }
+function getTimeOfDay() { return cycleTime < CONFIG.DAY_NIGHT.dayDuration ? 'day' : 'night'; }
 function getDayProgress() {
-  if (cycleTime < DAY_DURATION) return cycleTime / DAY_DURATION;
-  return (cycleTime - DAY_DURATION) / NIGHT_DURATION;
+  if (cycleTime < CONFIG.DAY_NIGHT.dayDuration) return cycleTime / CONFIG.DAY_NIGHT.dayDuration;
+  return (cycleTime - CONFIG.DAY_NIGHT.dayDuration) / CONFIG.DAY_NIGHT.nightDuration;
 }
 function getNightAlpha() {
   let tod = getTimeOfDay(), progress = getDayProgress();
   if (tod === 'day') {
-    if (progress < 0.1) return 0.7 * (1 - progress / 0.1);
-    if (progress > 0.9) return 0.7 * ((progress - 0.9) / 0.1);
+    if (progress < CONFIG.DAY_NIGHT.transitionEdge) return CONFIG.DAY_NIGHT.dawnDuskAlpha * (1 - progress / CONFIG.DAY_NIGHT.transitionEdge);
+    if (progress > 1 - CONFIG.DAY_NIGHT.transitionEdge) return CONFIG.DAY_NIGHT.dawnDuskAlpha * ((progress - (1 - CONFIG.DAY_NIGHT.transitionEdge)) / CONFIG.DAY_NIGHT.transitionEdge);
     return 0;
   } else {
-    if (progress < 0.1) return 0.7 + 0.3 * (progress / 0.1);
-    if (progress > 0.9) return 0.7 * (1 - (progress - 0.9) / 0.1);
-    return 0.85;
+    if (progress < CONFIG.DAY_NIGHT.transitionEdge) return CONFIG.DAY_NIGHT.dawnDuskAlpha + (CONFIG.DAY_NIGHT.nightAlpha - CONFIG.DAY_NIGHT.dawnDuskAlpha) * (progress / CONFIG.DAY_NIGHT.transitionEdge);
+    if (progress > 1 - CONFIG.DAY_NIGHT.transitionEdge) return CONFIG.DAY_NIGHT.nightAlpha * (1 - (progress - (1 - CONFIG.DAY_NIGHT.transitionEdge)) / CONFIG.DAY_NIGHT.transitionEdge);
+    return CONFIG.DAY_NIGHT.nightAlpha;
   }
 }
-
-// Движение
-const MOVE_SPEED = 5.0;
-const MAX_STACK = 99;
-const DROP_LIFETIME = 180000; // 3 минуты
-
-const BIOMES = {
-  water: {
-    name: '💧 Вода', base: 1, color: '#2a5a8a', textureKey: 'tile_water',
-    priority: 100, canBlend: false,
-    condition: function(t, h, w) { return w > 0.62; }
-  },
-  snow: {
-    name: '❄️ Снежная тайга', base: 5, color: '#e8e8f0', textureKey: 'tile_snow',
-    priority: 90, canBlend: true,
-    condition: function(t, h, w) { return t < 0.25; },
-    colorBy: 'temperature',
-    resources: {
-      snow_tree: { chance: 0.22, type: 'snow_tree' },
-      ice_rock: { chance: 0.30, type: 'ice_rock', minChance: 0.22 },
-      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.004 }
-    }
-  },
-  taiga: {
-    name: '🌲 Тайга', base: 7, color: '#4a7050', textureKey: 'tile_grass',
-    priority: 80, canBlend: true,
-    condition: function(t, h, w) { return t >= 0.25 && t < 0.38; },
-    colorBy: 'temperature',
-    resources: {
-      pine: { chance: 0.35, type: 'pine' },
-      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.904 }
-    }
-  },
-  sand: {
-    name: '🏜️ Пустыня', base: 2, color: '#c4b47c', textureKey: 'tile_sand',
-    priority: 70, canBlend: true,
-    condition: function(t, h, w) { return t > 0.60 && h < 0.50; },
-    colorBy: 'temperature',
-    resources: {
-      cactus: { chance: 0.10, type: 'cactus' },
-      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.904 }
-    }
-  },
-  stone: {
-    name: '🏔️ Горы', base: 3, color: '#6a6a6a', textureKey: 'tile_stone',
-    priority: 60, canBlend: false,
-    condition: function(t, h, w) { return t > 0.68 || (t > 0.50 && h < 0.30); },
-    resources: {
-      stone: { chance: 0.14, type: 'stone' },
-      ore: { chance: 0.24, type: 'ore', minChance: 0.14 },
-      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.904 }
-    }
-  },
-  mixed_forest: {
-    name: '🌲🌲 Смешанный лес', base: 6, color: '#3a6a2a', textureKey: 'tile_grass',
-    priority: 50, canBlend: true,
-    condition: function(t, h, w) { return h > 0.45 && h < 0.65; },
-    colorBy: 'both',
-    resources: {
-      tree: { chance: 0.18, type: 'tree' },
-      pine: { chance: 0.35, type: 'pine', minChance: 0.18 },
-      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.004 }
-    }
-  },
-  forest: {
-    name: '🌲 Лес', base: 0, color: '#3a6a2a', textureKey: 'tile_grass',
-    priority: 40, canBlend: true,
-    condition: function(t, h, w) { return h >= 0.65; },
-    colorBy: 'humidity',
-    resources: {
-      tree: { chance: 0.40, type: 'tree' },
-      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.004 }
-    }
-  },
-  grass: {
-    name: '🌾 Равнина', base: 0, color: '#4a7a3a', textureKey: 'tile_grass',
-    priority: 0, canBlend: true,
-    condition: function(t, h, w) { return true; },
-    colorBy: 'both',
-    resources: {
-      tree: { chance: 0.06, type: 'tree' },
-      bush: { chance: 0.10, type: 'bush', minChance: 0.06 },
-      wheat: { chance: 0.14, type: 'wheat', minChance: 0.10 },
-      cave_entrance: { chance: 0.005, type: 'cave_entrance', minChance: 0.004 }
-    }
-  },
-cave: {
-  name: '🕳️ Пещера', base: 3, color: '#3a3a2a', textureKey: 'tile_stone',
-  priority: 50, canBlend: false,
-  condition: function() { return false; },
-  resources: {
-    stone: { chance: 0.06, type: 'stone' },
-    ore: { chance: 0.10, type: 'ore', minChance: 0.06 }
-  }
-}
-};
 
 // Загружаем JSON из файла
 const ALL_MOBS = {};
@@ -177,20 +76,33 @@ const ALL_ITEMS = {};
 const ALL_RESOURCES = {};
 const ALL_TEXTURES = {};
 const ALL_RECIPES = {};
+let CONFIG = {};
+const ALL_BIOMES = {};
 
 async function loadJSON(){
-    const [mobs, items, resources, textures, recipes] = await Promise.all([
+    const [mobs, items, resources, textures, recipes, biomes, config] = await Promise.all([
         fetch('./mobs.json').then(r => r.json()),
         fetch('items.json').then(r => r.json()),
         fetch('resources.json').then(r => r.json()),
         fetch('textures.json').then(r => r.json()),
-        fetch('recipes.json').then(r => r.json())
+        fetch('recipes.json').then(r => r.json()),
+        fetch('biomes.json').then(r => r.json()),
+        fetch('config.json').then(r => r.json())
     ]);
+    Object.assign(CONFIG, config);
     Object.assign(ALL_MOBS, mobs);
     Object.assign(ALL_ITEMS, items);
     Object.assign(ALL_RESOURCES, resources);
     Object.assign(ALL_TEXTURES, textures);
     Object.assign(ALL_RECIPES, recipes);
+    
+    // Преобразуем строки condition в функции
+    for (let key in biomes) {
+        if (typeof biomes[key].condition === 'string') {
+            biomes[key].condition = new Function('t', 'h', 'w', 'return ' + biomes[key].condition);
+        }
+    }
+    Object.assign(ALL_BIOMES, biomes);
 }
 
 let openCampfire = null; // открытый костёр
@@ -212,8 +124,8 @@ function enterCave(entrance) {
   caveChunks = {};
   
   // Принудительно создаём чанк с проходимой клеткой для входа
-  let ck = Math.floor(player.tx/CHUNK_SIZE)+','+Math.floor(player.ty/CHUNK_SIZE);
-  caveChunks[ck] = { cx: Math.floor(player.tx/CHUNK_SIZE), cy: Math.floor(player.ty/CHUNK_SIZE), tiles: [], entities: [] };
+  let ck = Math.floor(player.tx/CONFIG.CHUNK_SIZE)+','+Math.floor(player.ty/CONFIG.CHUNK_SIZE);
+  caveChunks[ck] = { cx: Math.floor(player.tx/CONFIG.CHUNK_SIZE), cy: Math.floor(player.ty/CONFIG.CHUNK_SIZE), tiles: [], entities: [] };
   // Добавляем проходимый тайл
   caveChunks[ck].tiles.push({ tx: player.tx, ty: player.ty, base: 3, biome: 'cave' });
   
@@ -587,13 +499,13 @@ function getTile(tx, ty) {
   let humidity = smoothNoise(tx * 0.04 + 300, ty * 0.04 + 300);
   let waterNoise = smoothNoise(tx * 0.06 + 500, ty * 0.06 + 500);
   
-  let sorted = Object.keys(BIOMES).sort(function(a, b) {
-    return BIOMES[b].priority - BIOMES[a].priority;
+  let sorted = Object.keys(ALL_BIOMES).sort(function(a, b) {
+    return ALL_BIOMES[b].priority - ALL_BIOMES[a].priority;
   });
   
   for (let i = 0; i < sorted.length; i++) {
     let key = sorted[i];
-    let biome = BIOMES[key];
+    let biome = ALL_BIOMES[key];
     if (biome.condition && biome.condition(temperature, humidity, waterNoise)) {
       
       if (settings.smoothBiomes && biome.canBlend && settings.blendStrength > 0) {
@@ -614,8 +526,8 @@ function getTile(tx, ty) {
             let ny = ty + dirs[d][1];
             let neighborKey = getTileRaw(nx, ny);
             
-            if (neighborKey && neighborKey !== key && neighborKey !== 'water' && BIOMES[neighborKey]) {
-              return { base: biome.base, biome: key, blend: { base: BIOMES[neighborKey].base, amount: amount } };
+            if (neighborKey && neighborKey !== key && neighborKey !== 'water' && ALL_BIOMES[neighborKey]) {
+              return { base: biome.base, biome: key, blend: { base: ALL_BIOMES[neighborKey].base, amount: amount } };
             }
           }
         }
@@ -633,13 +545,13 @@ function getTileRaw(tx, ty) {
   let humidity = smoothNoise(tx * 0.04 + 300, ty * 0.04 + 300);
   let waterNoise = smoothNoise(tx * 0.06 + 500, ty * 0.06 + 500);
   
-  let sorted = Object.keys(BIOMES).sort(function(a, b) {
-    return BIOMES[b].priority - BIOMES[a].priority;
+  let sorted = Object.keys(ALL_BIOMES).sort(function(a, b) {
+    return ALL_BIOMES[b].priority - ALL_BIOMES[a].priority;
   });
   
   for (let i = 0; i < sorted.length; i++) {
     let key = sorted[i];
-    if (BIOMES[key].condition(temperature, humidity, waterNoise)) return key;
+    if (ALL_BIOMES[key].condition(temperature, humidity, waterNoise)) return key;
   }
   return 'grass';
 }
@@ -662,23 +574,23 @@ function addLog(m) {
 // ══════════════════════════════════════════════
 
 // Игрок
-let player = {
-  rx: 0, ry: 0, tx: 0, ty: 0,
-  hp: 100, maxHp: 100, damage: 5, attackRange: 1.5,
-  attackCooldown: 0, attackCooldownTime: 600,
-  lastMoveTime: 0, moveDelay: 100, moving: false,
-  level: 1, xp: 0, xpToNext: 50, pendingLevelUps: 0,
-  heldItem: null
-};
+let player;
 
-function getXpForLevel(lvl) { return Math.floor(50 * Math.pow(1.5, lvl - 1)); }
+function getXpForLevel(lvl) {
+  return Math.floor(CONFIG.LEVELING.baseXp * Math.pow(CONFIG.LEVELING.xpMultiplier, lvl - 1));
+}
 
 function addXp(amount) {
   player.xp += amount;
   addLog('✨ +' + amount + ' опыта');
   while (player.xp >= player.xpToNext) {
-    player.xp -= player.xpToNext; player.level++; player.xpToNext = getXpForLevel(player.level);
-    player.pendingLevelUps++; player.maxHp += 5; player.hp += 5; player.damage += 1;
+    player.xp -= player.xpToNext;
+    player.level++;
+    player.xpToNext = getXpForLevel(player.level);
+    player.pendingLevelUps++;
+    player.maxHp += CONFIG.LEVELING.hpPerLevel;
+    player.hp += CONFIG.LEVELING.hpPerLevel;
+    player.damage += CONFIG.LEVELING.damagePerLevel;
   }
   if (player.pendingLevelUps > 0 && !paused) showLevelUp();
 }
@@ -689,7 +601,7 @@ let selectedSlot = 0;
 
 function addToInventory(item) {
   for (let i = 0; i < inventory.length; i++) {
-    if (inventory[i] && inventory[i].name === item.name && inventory[i].count < MAX_STACK) {
+    if (inventory[i] && inventory[i].name === item.name && inventory[i].count < CONFIG.PLAYER.maxStack) {
       inventory[i].count += (item.count || 1); updateInventoryUI(); return true;
     }
   }
@@ -709,8 +621,8 @@ function addToInventoryOrDrop(item, tx, ty) {
 }
 
 function dropItemOnGround(item, tx, ty) {
-  let ck = Math.floor(tx/CHUNK_SIZE)+','+Math.floor(ty/CHUNK_SIZE);
-  if (!chunks[ck]) ensureChunk(Math.floor(tx/CHUNK_SIZE), Math.floor(ty/CHUNK_SIZE));
+  let ck = Math.floor(tx/CONFIG.CHUNK_SIZE)+','+Math.floor(ty/CONFIG.CHUNK_SIZE);
+  if (!chunks[ck]) ensureChunk(Math.floor(tx/CONFIG.CHUNK_SIZE), Math.floor(ty/CONFIG.CHUNK_SIZE));
   
   // Ищем существующий мешок на этой клетке
   let entities = chunks[ck].entities;
@@ -934,11 +846,16 @@ let openChest = null;
 function createEntity(d) { d.rx = d.tx; d.ry = d.ty; return d; }
 
 function getVisibleEntities() {
+  // Возвращаем кэш если кадр тот же
+  if (cachedVisibleEntities && frameCount === cachedVisibleEntitiesFrame) {
+    return cachedVisibleEntities;
+  }
+  
   let chunksRef = inCave ? caveChunks : chunks;
   let all = [], range = settings.renderDistance;
   let minTX = player.tx - range, maxTX = player.tx + range, minTY = player.ty - range, maxTY = player.ty + range;
-  let minCX = Math.floor(minTX/CHUNK_SIZE), maxCX = Math.floor(maxTX/CHUNK_SIZE);
-  let minCY = Math.floor(minTY/CHUNK_SIZE), maxCY = Math.floor(maxTY/CHUNK_SIZE);
+  let minCX = Math.floor(minTX/CONFIG.CHUNK_SIZE), maxCX = Math.floor(maxTX/CONFIG.CHUNK_SIZE);
+  let minCY = Math.floor(minTY/CONFIG.CHUNK_SIZE), maxCY = Math.floor(maxTY/CONFIG.CHUNK_SIZE);
   for (let cx = minCX; cx <= maxCX; cx++) for (let cy = minCY; cy <= maxCY; cy++) {
     let chunk = chunksRef[cx+','+cy];
     if (!chunk) continue;
@@ -947,6 +864,9 @@ function getVisibleEntities() {
       if (e.tx >= minTX && e.tx <= maxTX && e.ty >= minTY && e.ty <= maxTY) all.push(e);
     }
   }
+  
+  cachedVisibleEntities = all;
+  cachedVisibleEntitiesFrame = frameCount;
   return all;
 }
 
@@ -958,7 +878,7 @@ function getEntitiesAt(tx, ty, chunk) {
   let h = hash(tx*1000+123, ty*1000+456), h2 = hash(tx*777+999, ty*777+888), tod = getTimeOfDay();
   
   // Ресурсы по биомам
-  let biomeConfig = BIOMES[tile.biome];
+  let biomeConfig = ALL_BIOMES[tile.biome];
   if (biomeConfig && biomeConfig.resources) {
     let resKeys = Object.keys(biomeConfig.resources);
     for (let r = 0; r < resKeys.length; r++) {
@@ -991,7 +911,7 @@ entities.push(createEntity({
   if (inCave && caveEntrancePos) {
     let checkBiomes = ['grass', 'forest', 'sand', 'stone', 'snow', 'taiga', 'mixed_forest'];
     for (let b = 0; b < checkBiomes.length; b++) {
-      let bConf = BIOMES[checkBiomes[b]];
+      let bConf = ALL_BIOMES[checkBiomes[b]];
       if (bConf && bConf.resources && bConf.resources.cave_entrance) {
         let res = bConf.resources.cave_entrance;
         if (h >= (res.minChance||0) && h < res.chance) {
@@ -1110,17 +1030,17 @@ function ensureChunk(cx, cy) {
   let chunksRef = inCave ? caveChunks : chunks;
   if(chunksRef[key]) return chunksRef[key];
   
-  let sx=cx*CHUNK_SIZE, sy=cy*CHUNK_SIZE, tiles=[], entities=[];
+  let sx=cx*CONFIG.CHUNK_SIZE, sy=cy*CONFIG.CHUNK_SIZE, tiles=[], entities=[];
   let tmp = {cx,cy,tiles,entities};
   chunksRef[key]=tmp;
   
   let getTileFunc = inCave ? getTileCave : getTile;
   
-  for(let dx=0;dx<CHUNK_SIZE;dx++)for(let dy=0;dy<CHUNK_SIZE;dy++){
+  for(let dx=0;dx<CONFIG.CHUNK_SIZE;dx++)for(let dy=0;dy<CONFIG.CHUNK_SIZE;dy++){
     let t=getTileFunc(sx+dx,sy+dy);
     tiles.push({ tx:sx+dx, ty:sy+dy, base:t.base, biome:t.biome, blend:t.blend });
   }
-  for(let dx=0;dx<CHUNK_SIZE;dx++)for(let dy=0;dy<CHUNK_SIZE;dy++){
+  for(let dx=0;dx<CONFIG.CHUNK_SIZE;dx++)for(let dy=0;dy<CONFIG.CHUNK_SIZE;dy++){
     let ents=getEntitiesAt(sx+dx,sy+dy,tmp);
     for(let i=0;i<ents.length;i++)entities.push(ents[i]);
   }
@@ -1141,7 +1061,7 @@ function validateMonstersForTimeOfDay() {
       return true;
     });
   }
-  let range=18,minCX=Math.floor((player.tx-range)/CHUNK_SIZE),maxCX=Math.floor((player.tx+range)/CHUNK_SIZE),minCY=Math.floor((player.ty-range)/CHUNK_SIZE),maxCY=Math.floor((player.ty+range)/CHUNK_SIZE);
+  let range=18,minCX=Math.floor((player.tx-range)/CONFIG.CHUNK_SIZE),maxCX=Math.floor((player.tx+range)/CONFIG.CHUNK_SIZE),minCY=Math.floor((player.ty-range)/CONFIG.CHUNK_SIZE),maxCY=Math.floor((player.ty+range)/CONFIG.CHUNK_SIZE);
   for(let cx=minCX;cx<=maxCX;cx++)for(let cy=minCY;cy<=maxCY;cy++){
     let c=chunks[cx+','+cy];if(!c)continue;
     for(let i=0;i<c.tiles.length;i++){
@@ -1200,7 +1120,7 @@ function cleanupDead(){
     chunks[key].entities = chunks[key].entities.filter(function(e){
       if(e.type==='campfire'||e.type==='chest'||e.type==='tent') return true;
       if(e.type==='dropped_item'){
-        if(e.dropTime && now - e.dropTime > DROP_LIFETIME) return false;
+        if(e.dropTime && now - e.dropTime > CONFIG.DROP.lifetime) return false;
         if(!e.items || e.items.length === 0) return false;
         return true;
       }
@@ -1223,7 +1143,7 @@ function collectVisibleObjects(){
   let allTiles=[],allEntities=[];
   let range = settings.renderDistance;
   let minTX=player.tx-range,maxTX=player.tx+range,minTY=player.ty-range,maxTY=player.ty+range;
-  let minCX=Math.floor(minTX/CHUNK_SIZE),maxCX=Math.floor(maxTX/CHUNK_SIZE),minCY=Math.floor(minTY/CHUNK_SIZE),maxCY=Math.floor(maxTY/CHUNK_SIZE);
+  let minCX=Math.floor(minTX/CONFIG.CHUNK_SIZE),maxCX=Math.floor(maxTX/CONFIG.CHUNK_SIZE),minCY=Math.floor(minTY/CONFIG.CHUNK_SIZE),maxCY=Math.floor(maxTY/CONFIG.CHUNK_SIZE);
   for(let cx=minCX;cx<=maxCX;cx++)for(let cy=minCY;cy<=maxCY;cy++){
     ensureChunk(cx,cy);let chunk=chunksRef[cx+','+cy];if(!chunk)continue;
     for(let i=0;i<chunk.tiles.length;i++){let t=chunk.tiles[i];if(t.tx>=minTX&&t.tx<=maxTX&&t.ty>=minTY&&t.ty<=maxTY)allTiles.push(t);}
@@ -1235,212 +1155,7 @@ function collectVisibleObjects(){
 }
 
 // AI и бой
-function canMoveTo(tx, ty, self) {
-  let tile = getTile(tx, ty);
-  if (tile.base === 1) return false;
-  if (inCave && tile.base === -1) return false; // стена пещеры
-  let all = getVisibleEntities();
-  for (let i = 0; i < all.length; i++) {
-    let e = all[i];
-    if (e === self) continue;
-    if (e.tx === tx && e.ty === ty && e.hp > 0 && e.type !== 'campfire' && e.type !== 'chest' && e.type !== 'dropped_item' && e.type !== 'resource') return false;
-  }
-  if (player.tx === tx && player.ty === ty) return false;
-  return true;
-}
 
-function updateAI(e, dt, isPeaceful) {
-  if (e.hp <= 0 || e.type === 'campfire' || e.type === 'chest' || e.type === 'dropped_item') return;
-  let ai = e.ai; if (!ai) return;
-  let distToPlayer = Math.sqrt((e.tx - player.tx) ** 2 + (e.ty - player.ty) ** 2);
-  
-  if (Math.abs(e.rx - e.tx) > 0.01 || Math.abs(e.ry - e.ty) > 0.01) {
-    let speed = MOVE_SPEED * dt / 1000;
-    let ddx = e.tx - e.rx, ddy = e.ty - e.ry;
-    let dist = Math.sqrt(ddx * ddx + ddy * ddy);
-    if (dist <= speed) { e.rx = e.tx; e.ry = e.ty; }
-    else { e.rx += (ddx / dist) * speed; e.ry += (ddy / dist) * speed; }
-    if (dist > 0.001) {
-      e._lastDDX = ddx;
-      e._lastDDY = ddy;
-    }
-  }
-  
-  // Убегание при низком HP для animal
-if (!e.fleeTimer && e.category === 'animal') {
-    let hpPercent = e.hp / (e.maxHp || e.hp);
-    if ((e.type === 'peaceful' && e._wasAttacked) || hpPercent < 0.2) {
-      e.fleeTimer = 3000;
-      let attacker = e._lastAttacker || { tx: player.tx, ty: player.ty };
-      e._fleeFrom = { tx: attacker.tx, ty: attacker.ty };
-      ai.state = 'flee';
-      ai._hunting = null; // ← ДОБАВЬ ЭТО
-      e._wasAttacked = false; // ← ДОБАВЬ ЭТО
-    }
-}
-  
-  // Проверка fleeFrom — для ВСЕХ
-  if (!e.fleeTimer && e.fleeFrom) {
-    if (e.fleeFrom.indexOf('player') !== -1 && distToPlayer < 5 && player.hp > 0) {
-      e.fleeTimer = 2000;
-      e._fleeFrom = { tx: player.tx, ty: player.ty };
-      ai.state = 'flee';
-    } else {
-      let allEnts = getVisibleEntities();
-      for (let j = 0; j < allEnts.length; j++) {
-        let other = allEnts[j];
-        if (other.hp > 0 && other.mobKey && e.fleeFrom.indexOf(other.mobKey) !== -1) {
-          let distToThreat = Math.sqrt((e.tx - other.tx) ** 2 + (e.ty - other.ty) ** 2);
-          if (distToThreat < 5) {
-            e.fleeTimer = 2000;
-            e._fleeFrom = { tx: other.tx, ty: other.ty };
-            ai.state = 'flee';
-            break;
-          }
-        }
-      }
-    }
-  }
-  
-  // Если убегает
-  if (e.fleeTimer > 0) {
-    e.fleeTimer -= dt;
-    ai.moveCooldown -= dt;
-    let fleeTarget = e._fleeFrom || { tx: player.tx, ty: player.ty };
-    let distToThreat = Math.sqrt((e.tx - fleeTarget.tx) ** 2 + (e.ty - fleeTarget.ty) ** 2);
-    if (ai.moveCooldown <= 0 && distToThreat < 8 && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
-      ai.moveCooldown = 250 + Math.random() * 200;
-      let dx = -Math.sign(fleeTarget.tx - e.tx), dy = -Math.sign(fleeTarget.ty - e.ty);
-      if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
-      else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; }
-    }
-    return;
-  }
-  
-  // Мирные без fleeTimer — бродим
-  if (isPeaceful) {
-    ai.idleTimer -= dt;
-    if (ai.idleTimer <= 0) { ai.idleTimer = 2000 + Math.random() * 4000; ai.wanderTarget = { tx: e.tx + Math.floor(Math.random() * 4) - 2, ty: e.ty + Math.floor(Math.random() * 4) - 2 }; }
-    if (ai.wanderTarget && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
-      let d = Math.abs(e.tx - ai.wanderTarget.tx) + Math.abs(e.ty - ai.wanderTarget.ty);
-      if (d > 0) { ai.moveCooldown -= dt; if (ai.moveCooldown <= 0) { ai.moveCooldown = 500 + Math.random() * 300;
-        let dx = Math.sign(ai.wanderTarget.tx - e.tx), dy = Math.sign(ai.wanderTarget.ty - e.ty);
-        if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
-        else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; } }
-      } else { ai.wanderTarget = null; ai.idleTimer = 2000 + Math.random() * 3000; }
-    }
-    return;
-  }
-  
-  // Враждебные / нейтральные
-  let isAggressive = e._isAggressive || (!e.neutral);
-  let shouldChase = false;
-  
-  if (isAggressive && ai.state !== 'chase') {
-    let allEnts = getVisibleEntities();
-    for (let j = 0; j < allEnts.length; j++) {
-      let prey = allEnts[j];
-      if (prey.hp > 0 && prey.mobKey && prey !== e) {
-        let canHunt = false;
-        if (e.huntTargets) { canHunt = e.huntTargets.indexOf(prey.mobKey) !== -1; }
-        else { canHunt = prey.type === 'peaceful'; }
-        if (!canHunt) continue;
-        let distToPrey = Math.sqrt((e.tx - prey.tx) ** 2 + (e.ty - prey.ty) ** 2);
-        if (distToPrey <= e.chaseRange) { shouldChase = true; ai._hunting = prey; break; }
-      }
-    }
-  }
-  
-  if (!shouldChase && e._wasAttacked && e._lastAttacker) {
-    let attacker = e._lastAttacker;
-    if (attacker.hp > 0) {
-      let distToAttacker = Math.sqrt((e.tx - attacker.tx) ** 2 + (e.ty - attacker.ty) ** 2);
-      if (distToAttacker <= e.chaseRange) { shouldChase = true; ai._hunting = attacker; }
-    }
-  }
-  
-  if (!shouldChase) {
-    if (isAggressive) {
-      let effectiveChaseRange = player.inTent ? e.chaseRange / 2 : e.chaseRange;
-      if (distToPlayer <= effectiveChaseRange && player.hp > 0) shouldChase = true;
-    } else if (e.neutral) {
-      if (e._wasAttacked && distToPlayer <= e.chaseRange && player.hp > 0) shouldChase = true;
-    }
-  }
-  
-  if (shouldChase) { ai.state = 'chase'; ai.forgetTimer = 5000; }
-  
-  if (ai.state === 'chase') {
-    // Проверка низкого HP
-    if (e.category === 'animal') {
-      let hpPercent = e.hp / (e.maxHp || e.hp);
-      console.log('animal check', e.name, 'hp%', hpPercent, 'maxHp', e.maxHp, 'hp', e.hp);
-      if (hpPercent < 0.2) {
-        console.log('flee!', e.name);
-        e.fleeTimer = 3000;
-        e._fleeFrom = { tx: player.tx, ty: player.ty };
-        ai.state = 'flee';
-        ai._hunting = null;
-        e._wasAttacked = false;
-        return;
-      }
-    }
-    
-    let target = ai._hunting || { tx: player.tx, ty: player.ty, hp: player.hp };
-    let distToTarget = Math.sqrt((e.tx - target.tx) ** 2 + (e.ty - target.ty) ** 2);
-    
-    ai.forgetTimer -= dt;
-    if (ai.forgetTimer <= 0 || (target === player && player.hp <= 0) || (ai._hunting && ai._hunting.hp <= 0)) {
-      ai.state = 'idle'; ai.idleTimer = 1000 + Math.random() * 2000;
-      e._wasAttacked = false; e._lastAttacker = null; ai._hunting = null;
-    } else {
-      ai.moveCooldown -= dt;
-      if (ai.moveCooldown <= 0 && distToTarget > e.attackRange && Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
-        ai.moveCooldown = e.moveDelay + Math.random() * 200;
-        let dx = Math.sign(target.tx - e.tx), dy = Math.sign(target.ty - e.ty);
-        if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
-        else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; }
-      }
-      if (distToTarget <= e.attackRange && e.attackCooldown <= 0) {
-        if (ai._hunting) {
-          ai._hunting.hp -= e.damage;
-          ai._hunting.fleeTimer = 2000;
-          ai._hunting._wasAttacked = true;
-          ai._hunting._lastAttacker = e;
-          ai._hunting._hurtAnim = Date.now();
-          e._attackAnim = Date.now();
-          e.attackCooldown = e.attackCooldownTime;
-          if (ai._hunting.hp <= 0) {
-            ai._hunting.hp = -1;
-            ai._hunting.deathTime = Date.now();
-            ai._hunting = null;
-            ai.state = 'idle';
-          }
-        } else {
-          if (!player.godMode) { player.hp -= e.damage; }
-          player._hurtAnim = Date.now();
-          player._hurtDir = { dx: -Math.sign(e.tx - player.tx), dy: -Math.sign(e.ty - player.ty) };
-          e._attackAnim = Date.now();
-          e.attackCooldown = e.attackCooldownTime;
-          addLog('💥 ' + e.name + ' атакует! -' + e.damage + ' HP');
-          if (player.hp <= 0) { player.hp = 0; addLog('☠️ ТЫ ПОГИБ...'); document.getElementById('death-screen').classList.add('active'); }
-        }
-      }
-    }
-  } else if (ai.state === 'idle') {
-    ai.idleTimer -= dt;
-    if (ai.idleTimer <= 0) { ai.state = 'wander'; ai.wanderTarget = { tx: e.tx + Math.floor(Math.random() * 6) - 3, ty: e.ty + Math.floor(Math.random() * 6) - 3 }; }
-  } else if (ai.state === 'wander') {
-    if (Math.abs(e.rx - e.tx) < 0.01 && Math.abs(e.ry - e.ty) < 0.01) {
-      let distToTarget = Math.abs(e.tx - ai.wanderTarget.tx) + Math.abs(e.ty - ai.wanderTarget.ty);
-      if (distToTarget <= 0) { ai.state = 'idle'; ai.idleTimer = 1000 + Math.random() * 3000; }
-      else { ai.moveCooldown -= dt; if (ai.moveCooldown <= 0) { ai.moveCooldown = e.moveDelay + Math.random() * 300;
-        let dx = Math.sign(ai.wanderTarget.tx - e.tx), dy = Math.sign(ai.wanderTarget.ty - e.ty);
-        if (Math.random() < 0.5) { if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; else if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; }
-        else { if (dy !== 0 && canMoveTo(e.tx, e.ty + dy, e)) e.ty += dy; else if (dx !== 0 && canMoveTo(e.tx + dx, e.ty, e)) e.tx += dx; } } }
-    }
-  }
-}
 
 function attackEntity(target) {
   if (player.attackCooldown > 0 || player.hp <= 0) return;
@@ -1475,7 +1190,7 @@ function attackEntity(target) {
   if (target.type === 'resource') {
     if ((target.resourceKey === 'tree' || target.resourceKey === 'pine') && Math.random() < 0.15) {
       let spiderMob = ALL_MOBS['spider'];
-      let ck = Math.floor(target.tx/CHUNK_SIZE)+','+Math.floor(target.ty/CHUNK_SIZE);
+      let ck = Math.floor(target.tx/CONFIG.CHUNK_SIZE)+','+Math.floor(target.ty/CONFIG.CHUNK_SIZE);
       if (chunks[ck]) {
         chunks[ck].entities.push(createEntity({
           type:'monster', mobKey:'spider',
@@ -1641,8 +1356,8 @@ function placeItem(typeKey, color, radius) {
   if (getTile(nx, ny).base === 1) { addLog('❌ Нельзя ставить на воде!'); return false; }
   let all = getVisibleEntities();
   for (let i = 0; i < all.length; i++) { let e = all[i]; if (e.tx === nx && e.ty === ny && e.hp > 0 && (e.type === 'campfire' || e.type === 'chest' || e.type === 'resource')) { addLog('❌ Место занято!'); return false; } }
-  let ck = Math.floor(nx/CHUNK_SIZE)+','+Math.floor(ny/CHUNK_SIZE);
-  if (!chunks[ck]) ensureChunk(Math.floor(nx/CHUNK_SIZE), Math.floor(ny/CHUNK_SIZE));
+  let ck = Math.floor(nx/CONFIG.CHUNK_SIZE)+','+Math.floor(ny/CONFIG.CHUNK_SIZE);
+  if (!chunks[ck]) ensureChunk(Math.floor(nx/CONFIG.CHUNK_SIZE), Math.floor(ny/CONFIG.CHUNK_SIZE));
   if (typeKey === 'chest') {
     chunks[ck].entities.push(createEntity({ type:'chest', tx:nx, ty:ny, name:'📦 Сундук', hp:999, maxHp:999, h:8, color:color, storage: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null] }));
   } else if (typeKey === 'tent') {
@@ -1762,7 +1477,7 @@ slot.onclick = function() {
     // Пытаемся переместить в инвентарь игрока
     let moved = false;
     for (let j = 0; j < inventory.length; j++) {
-      if (inventory[j] && inventory[j].name === storage[idx].name && inventory[j].count < MAX_STACK) {
+      if (inventory[j] && inventory[j].name === storage[idx].name && inventory[j].count < CONFIG.PLAYER.maxStack) {
         inventory[j].count += storage[idx].count;
         storage[idx] = null;
         moved = true;
@@ -1845,7 +1560,7 @@ slot.onclick = function() {
     // Пытаемся переместить в сундук
     let moved = false;
     for (let j = 0; j < storage.length; j++) {
-      if (storage[j] && storage[j].name === inventory[idx].name && storage[j].count < MAX_STACK) {
+      if (storage[j] && storage[j].name === inventory[idx].name && storage[j].count < CONFIG.PLAYER.maxStack) {
         storage[j].count += inventory[idx].count;
         inventory[idx] = null;
         moved = true;
@@ -1885,7 +1600,7 @@ function drawTileCode(tx, ty, base){
     } else {
       let temperature = smoothNoise(tx * 0.04 + 100, ty * 0.04 + 100);
       let humidity = smoothNoise(tx * 0.04 + 300, ty * 0.04 + 300);
-      let biomeConfig = Object.values(BIOMES).find(function(b){ return b.base === base; });
+      let biomeConfig = Object.values(ALL_BIOMES).find(function(b){ return b.base === base; });
       color = biomeConfig ? biomeConfig.color : '#000';
       if (biomeConfig && biomeConfig.colorBy) {
         color = adjustColor(color, temperature, humidity, biomeConfig.colorBy);
@@ -1951,18 +1666,18 @@ function drawTileTex(tx, ty, tileData) {
   ctx.clip();
   
   // Рисуем текстуру
-  ctx.drawImage(img, pos.x - hw, pos.y - hh, TILE_W * zoom, TILE_H * zoom);
+  ctx.drawImage(img, pos.x - hw, pos.y - hh, CONFIG.TILE_W * zoom, CONFIG.TILE_H * zoom);
   
   // Вычисляем цвет на основе температуры/влажности этой клетки
   let temperature = smoothNoise(tx * 0.04 + 100, ty * 0.04 + 100);
   let humidity = smoothNoise(tx * 0.04 + 300, ty * 0.04 + 300);
-  let biomeConfig = Object.values(BIOMES).find(function(b){ return b.base === base; });
+  let biomeConfig = Object.values(ALL_BIOMES).find(function(b){ return b.base === base; });
   
   if (biomeConfig && biomeConfig.colorBy) {
     let adjustedColor = adjustColor(biomeConfig.color, temperature, humidity, biomeConfig.colorBy);
     ctx.fillStyle = adjustedColor;
     ctx.globalAlpha = 0.3;
-    ctx.fillRect(pos.x - hw, pos.y - hh, TILE_W * zoom, TILE_H * zoom);
+    ctx.fillRect(pos.x - hw, pos.y - hh, CONFIG.TILE_W * zoom, CONFIG.TILE_H * zoom);
     ctx.globalAlpha = 1;
   }
   
@@ -1971,7 +1686,7 @@ function drawTileTex(tx, ty, tileData) {
     let blendImg = getTex(keys[blend.base]);
     if (blendImg) {
       ctx.globalAlpha = blend.amount;
-      ctx.drawImage(blendImg, pos.x - hw, pos.y - hh, TILE_W * zoom, TILE_H * zoom);
+      ctx.drawImage(blendImg, pos.x - hw, pos.y - hh, CONFIG.TILE_W * zoom, CONFIG.TILE_H * zoom);
       ctx.globalAlpha = 1;
     }
   }
@@ -2321,6 +2036,43 @@ function render(){
   let allObjs=[];for(let i=0;i<objs.entities.length;i++)allObjs.push(objs.entities[i]);
   allObjs.push({type:'player',rx:player.rx,ry:player.ry,tx:player.tx,ty:player.ty});
   allObjs.sort(function(a,b){return(a.tx+a.ty)-(b.tx+b.ty);});
+  
+  // ═══ ОТРИСОВКА МАРШРУТА (под игроком) ═══
+  if (playerPath.length > 0 || pathTarget) {
+    ctx.save();
+    
+    if (pathTarget) {
+      let targetPos = tileToScreen(pathTarget.tx, pathTarget.ty);
+      let pulse = 0.6 + 0.4 * Math.sin(Date.now() / 300);
+      let color = 'rgba(255, 255, 0, ';
+      
+      ctx.fillStyle = color + (0.3 * pulse) + ')';
+      ctx.beginPath();
+      ctx.arc(targetPos.x, targetPos.y, 8 * zoom, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = color + (0.6 * pulse) + ')';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    
+    if (playerPath.length > 0) {
+      ctx.strokeStyle = 'rgba(255, 255, 100, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      let firstPos = tileToScreen(player.tx, player.ty);
+      ctx.moveTo(firstPos.x, firstPos.y);
+      for (let i = 0; i < Math.min(playerPath.length, 50); i++) {
+        let pos = tileToScreen(playerPath[i].tx, playerPath[i].ty);
+        ctx.lineTo(pos.x, pos.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    ctx.restore();
+  }
+  
   for(let i=0;i<allObjs.length;i++){let o=allObjs[i];if(o.type==='player')drawPlayerTex();else drawEntityTex(o);}
   
   // Ночь с вырезанием света от костров
@@ -2341,7 +2093,7 @@ function render(){
       let e=objs.entities[i];
       if(e.type==='campfire'){
         let pos=tileToScreen(e.rx,e.ry);
-        let rad=e.lightRadius*TILE_W*zoom;
+        let rad=e.lightRadius*CONFIG.TILE_W*zoom;
         
         let grad=nctx.createRadialGradient(pos.x,pos.y,rad*0.1,pos.x,pos.y,rad);
         grad.addColorStop(0,'rgba(255,255,255,1)');
@@ -2365,28 +2117,24 @@ function render(){
   // Туман по краям экрана
   let fogWidth = 40 * zoom;
   
-  // Верх
   let topGrad = ctx.createLinearGradient(0, 0, 0, fogWidth);
   topGrad.addColorStop(0, 'rgba(180, 190, 210, 0.2)');
   topGrad.addColorStop(1, 'rgba(180, 190, 210, 0)');
   ctx.fillStyle = topGrad;
   ctx.fillRect(0, 0, W, fogWidth);
   
-  // Низ
   let bottomGrad = ctx.createLinearGradient(0, H, 0, H - fogWidth);
   bottomGrad.addColorStop(0, 'rgba(180, 190, 210, 0.2)');
   bottomGrad.addColorStop(1, 'rgba(180, 190, 210, 0)');
   ctx.fillStyle = bottomGrad;
   ctx.fillRect(0, H - fogWidth, W, fogWidth);
   
-  // Лево
   let leftGrad = ctx.createLinearGradient(0, 0, fogWidth, 0);
   leftGrad.addColorStop(0, 'rgba(180, 190, 210, 0.2)');
   leftGrad.addColorStop(1, 'rgba(180, 190, 210, 0)');
   ctx.fillStyle = leftGrad;
   ctx.fillRect(0, 0, fogWidth, H);
   
-  // Право
   let rightGrad = ctx.createLinearGradient(W, 0, W - fogWidth, 0);
   rightGrad.addColorStop(0, 'rgba(180, 190, 210, 0.2)');
   rightGrad.addColorStop(1, 'rgba(180, 190, 210, 0)');
@@ -2399,6 +2147,7 @@ function render(){
   updatePlayerStats();
   updateInventoryUI();
 }
+
 // Управление
 let keys={};
 window.addEventListener('keydown',function(e){
@@ -2476,91 +2225,195 @@ window.addEventListener('keyup',function(e){keys[e.key.toLowerCase()]=false;keys
 canvas.addEventListener('wheel',function(e){if(paused||openChest)return;if(e.shiftKey||e.ctrlKey){e.preventDefault();
   zoom=Math.max(1.0,Math.min(3.0,zoom-e.deltaY*0.001));
 }else{e.preventDefault();if(e.deltaY>0)selectedSlot=(selectedSlot+1)%8;else selectedSlot=(selectedSlot-1+8)%8;updateInventoryUI();}});
-canvas.addEventListener('click',function(e){
-  if(paused||player.hp<=0)return;
+canvas.addEventListener('click', function(e) {
+  if (paused || player.hp <= 0) return;
+  if (openChest || openCampfire) return;
   
-  let rect=canvas.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;
-  let entities=getVisibleEntities();
+  let rect = canvas.getBoundingClientRect();
+  let mx = e.clientX - rect.left;
+  let my = e.clientY - rect.top;
+  let entities = getVisibleEntities();
   
   // Если клик мимо UI
-  if(e.target !== canvas) return;
+  if (e.target !== canvas) return;
   
-  // Если держим предмет
-  if(player.heldItem){
-    // Пытаемся положить в сундук
-    let bestChest=null,bestDist=35;
-    for(let i=0;i<entities.length;i++){let ent=entities[i];if(ent.type==='chest'){let pos=tileToScreen(ent.rx,ent.ry);let dx=mx-pos.x,dy=my-pos.y,dist=Math.sqrt(dx*dx+dy*dy);if(dist<bestDist){bestDist=dist;bestChest=ent;}}}
-    if(bestChest){openChestUI(bestChest);return;}
-    // Отмена
+  // Если держим предмет — кладём в сундук
+  if (player.heldItem) {
+    let bestChest = null, bestDist = 35;
+    for (let i = 0; i < entities.length; i++) {
+      let ent = entities[i];
+      if (ent.type === 'chest') {
+        let pos = tileToScreen(ent.rx, ent.ry);
+        let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < bestDist) { bestDist = dist; bestChest = ent; }
+      }
+    }
+    if (bestChest) { openChestUI(bestChest); return; }
     addLog('✋ Отмена переноса');
-    player.heldItem=null;
+    player.heldItem = null;
     updateInventoryUI();
     return;
   }
   
-  // Клик по входу в пещеру
-  for(let i=0;i<entities.length;i++){
-    let ent=entities[i];
-    if(ent.type==='cave_entrance'){
-      let pos=tileToScreen(ent.rx,ent.ry);
-      let dx=mx-pos.x,dy=my-pos.y,dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist<25 && Math.abs(ent.tx-player.tx)+Math.abs(ent.ty-player.ty)<=1.5){
-        enterCave(ent);
-        addLog('🕳️ Вы вошли в пещеру!');
+  // Клик по входу/выходу из пещеры
+  for (let i = 0; i < entities.length; i++) {
+    let ent = entities[i];
+    if (ent.type === 'cave_entrance' || ent.type === 'cave_exit') {
+      let pos = tileToScreen(ent.rx, ent.ry);
+      let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 25 && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
+        if (ent.type === 'cave_entrance') {
+          enterCave(ent);
+          addLog('🕳️ Вы вошли в пещеру!');
+        } else {
+          exitCave({ tx: ent.surfaceTx || ent.tx, ty: ent.surfaceTy || ent.ty });
+          addLog('🕳️ Вы вышли из пещеры!');
+        }
         return;
       }
     }
   }
-
-  // Клик по выходу из пещеры
-  for(let i=0;i<entities.length;i++){
-    let ent=entities[i];
-    if(ent.type==='cave_exit'){
-      let pos=tileToScreen(ent.rx,ent.ry);
-      let dx=mx-pos.x,dy=my-pos.y,dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist<25 && Math.abs(ent.tx-player.tx)+Math.abs(ent.ty-player.ty)<=1.5){
-        exitCave({ tx: ent.surfaceTx || ent.tx, ty: ent.surfaceTy || ent.ty });
-        addLog('🕳️ Вы вышли из пещеры!');
-        return;
-      }
-    }
-  }
-
-    // Клик по костру
-  for(let i=0;i<entities.length;i++){
-    let ent=entities[i];
-    if(ent.type==='campfire'){
-      let pos=tileToScreen(ent.rx,ent.ry);
-      let dx=mx-pos.x,dy=my-pos.y,dist=Math.sqrt(dx*dx+dy*dy);
-      if(dist<25 && Math.abs(ent.tx-player.tx)+Math.abs(ent.ty-player.ty)<=1.5){
+  
+  // Клик по костру
+  for (let i = 0; i < entities.length; i++) {
+    let ent = entities[i];
+    if (ent.type === 'campfire') {
+      let pos = tileToScreen(ent.rx, ent.ry);
+      let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 25 && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
         openCampfireUI(ent);
         return;
       }
     }
   }
-
+  
   // Клик по сундуку
-  for(let i=0;i<entities.length;i++){let ent=entities[i];if(ent.type==='chest'){let pos=tileToScreen(ent.rx,ent.ry);let dx=mx-pos.x,dy=my-pos.y,dist=Math.sqrt(dx*dx+dy*dy);if(dist<30){openChestUI(ent);return;}}}
+  for (let i = 0; i < entities.length; i++) {
+    let ent = entities[i];
+    if (ent.type === 'chest') {
+      let pos = tileToScreen(ent.rx, ent.ry);
+      let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 30 && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
+        openChestUI(ent);
+        return;
+      }
+    }
+  }
   
-  // Клик по dropped_item
-  for(let i=0;i<entities.length;i++){let ent=entities[i];if(ent.type==='dropped_item'&&ent.items&&ent.items.length>0){let pos=tileToScreen(ent.rx,ent.ry);let dx=mx-pos.x,dy=my-pos.y,dist=Math.sqrt(dx*dx+dy*dy);if(dist<25 && Math.abs(ent.tx-player.tx)+Math.abs(ent.ty-player.ty)<=1.5){pickupDroppedItem(ent);addLog('📦 Предметы подобраны!');return;}}}
+  // Клик по dropped_item — подобрать
+  for (let i = 0; i < entities.length; i++) {
+    let ent = entities[i];
+    if (ent.type === 'dropped_item' && ent.items && ent.items.length > 0) {
+      let pos = tileToScreen(ent.rx, ent.ry);
+      let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 25 && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
+        pickupDroppedItem(ent);
+        addLog('📦 Предметы подобраны!');
+        return;
+      }
+    }
+  }
   
-  // Атака
-  let targets=[];
-  for(let i=0;i<entities.length;i++){let ent=entities[i];if((ent.type==='monster'||ent.type==='peaceful'||ent.type==='resource')&&ent.hp>0)targets.push(ent);}
-  let best=null,bestDist=40;
-  for(let i=0;i<targets.length;i++){let t=targets[i],pos=tileToScreen(t.rx,t.ry),dx=mx-pos.x,dy=my-(pos.y-(t.h||16)*zoom*0.6),dist=Math.sqrt(dx*dx+dy*dy);if(dist<bestDist){bestDist=dist;best=t;}}
-  if(best)attackEntity(best);
+  // ═══ ИЩЕМ ЦЕЛЬ ДЛЯ АТАКИ (враги + ресурсы) ═══
+  let targets = [];
+  for (let i = 0; i < entities.length; i++) {
+    let ent = entities[i];
+    if ((ent.type === 'monster' || ent.type === 'peaceful' || ent.type === 'resource') && ent.hp > 0) {
+      targets.push(ent);
+    }
+  }
+  
+  // Ищем ближайшую цель под курсором
+  let bestTarget = null, bestTargetDist = 40;
+  for (let i = 0; i < targets.length; i++) {
+    let t = targets[i];
+    let pos = tileToScreen(t.rx, t.ry);
+    let dx = mx - pos.x;
+    let dy = my - (pos.y - (t.h || 16) * zoom * 0.6);
+    let dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < bestTargetDist) {
+      bestTargetDist = dist;
+      bestTarget = t;
+    }
+  }
+  
+  // Если нашли цель под курсором
+  if (bestTarget) {
+    let distToTarget = Math.sqrt((bestTarget.tx - player.tx) ** 2 + (bestTarget.ty - player.ty) ** 2);
+    
+    if (distToTarget <= player.attackRange) {
+      // Цель рядом — атакуем сразу
+      attackEntity(bestTarget);
+    } else {
+      // Цель далеко — идём ТОЧНО на её клетку
+      let path = findPath(player.tx, player.ty, bestTarget.tx, bestTarget.ty, 80);
+      if (path && path.length > 0) {
+        playerPath = path;
+        pathTarget = { tx: bestTarget.tx, ty: bestTarget.ty };
+        player._attackOnArrival = null;
+      }
+    }
+    return;
+  }
+  
+  // ═══ НЕТ ЦЕЛИ — ИДЁМ ПО ЗЕМЛЕ ═══
+  let bestTX = player.tx, bestTY = player.ty;
+  let bestDist = Infinity;
+  
+  for (let dx = -5; dx <= 5; dx++) {
+    for (let dy = -5; dy <= 5; dy++) {
+      let checkTX = Math.round(player.tx + (mx - canvas.width/2) / (CONFIG.TILE_W/2 * zoom) / 2 + (my - canvas.height/2) / (CONFIG.TILE_H/2 * zoom) / 2 + dx);
+      let checkTY = Math.round(player.ty - (mx - canvas.width/2) / (CONFIG.TILE_W/2 * zoom) / 2 + (my - canvas.height/2) / (CONFIG.TILE_H/2 * zoom) / 2 + dy);
+      
+      let screenPos = tileToScreen(checkTX, checkTY);
+      let dist = Math.sqrt((mx - screenPos.x) ** 2 + (my - screenPos.y) ** 2);
+      
+      if (dist < bestDist && dist < 30 * zoom) {
+        let tile = getTile(checkTX, checkTY);
+        if (tile.base !== 1 && !(inCave && tile.base === -1)) {
+          let blocked = false;
+          for (let i = 0; i < entities.length; i++) {
+            let e = entities[i];
+            if (e.tx === checkTX && e.ty === checkTY && e.hp > 0 &&
+                e.type !== 'campfire' && e.type !== 'chest' && 
+                e.type !== 'dropped_item' && e.type !== 'resource' &&
+                e.type !== 'tent' && e.type !== 'cave_entrance' && e.type !== 'cave_exit') {
+              blocked = true;
+              break;
+            }
+          }
+          if (checkTX === player.tx && checkTY === player.ty) blocked = true;
+          
+          if (!blocked) {
+            bestDist = dist;
+            bestTX = checkTX;
+            bestTY = checkTY;
+          }
+        }
+      }
+    }
+  }
+  
+  // Строим путь
+  if (bestTX !== player.tx || bestTY !== player.ty) {
+    let path = findPath(player.tx, player.ty, bestTX, bestTY, 80);
+    if (path && path.length > 0) {
+      playerPath = path;
+      pathTarget = { tx: bestTX, ty: bestTY };
+      player._attackOnArrival = null;
+    }
+  }
 });
+
 canvas.addEventListener('contextmenu', function(e) {
   e.preventDefault();
   if (paused || player.hp <= 0) return;
   if (openChest || openCampfire) return;
   
+  // Если нет предмета в руке — игнорируем
   let item = inventory[selectedSlot];
   if (!item) return;
   
-  // Ищем данные предмета
   let itemData = findItemData(item.name);
   if (!itemData || !itemData.placeable) return;
   
@@ -2568,6 +2421,7 @@ canvas.addEventListener('contextmenu', function(e) {
   let mx = e.clientX - rect.left;
   let my = e.clientY - rect.top;
   
+  // Ищем ближайшую клетку для установки
   let entities = getVisibleEntities();
   let bestTx = player.tx, bestTy = player.ty;
   let bestDist = 50;
@@ -2577,26 +2431,15 @@ canvas.addEventListener('contextmenu', function(e) {
     let key = tx + ',' + ty;
     if (checkedTiles[key]) return;
     checkedTiles[key] = true;
-    
     let pos = tileToScreen(tx, ty);
     let dx = mx - pos.x;
     let dy = my - pos.y;
     let dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestTx = tx;
-      bestTy = ty;
-    }
+    if (dist < bestDist) { bestDist = dist; bestTx = tx; bestTy = ty; }
   };
   
-  for (let i = 0; i < entities.length; i++) {
-    checkTile(entities[i].tx, entities[i].ty);
-  }
-  for (let dx = -2; dx <= 2; dx++) {
-    for (let dy = -2; dy <= 2; dy++) {
-      checkTile(player.tx + dx, player.ty + dy);
-    }
-  }
+  for (let i = 0; i < entities.length; i++) checkTile(entities[i].tx, entities[i].ty);
+  for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) checkTile(player.tx + dx, player.ty + dy);
   
   let distToTarget = Math.sqrt((bestTx - player.tx) ** 2 + (bestTy - player.ty) ** 2);
   if (distToTarget > 1.5) {
@@ -2659,9 +2502,9 @@ if (parts.length === 1 && val.startsWith('/')) {
       suggestions = ['day', 'night', '300'].filter(s => s.startsWith(lastPart));
     } else if (cmd === 'find') {
       let allRes = [];
-      for (let bk in BIOMES) {
-        if (BIOMES[bk].resources) {
-          for (let rk in BIOMES[bk].resources) {
+      for (let bk in ALL_BIOMES) {
+        if (ALL_BIOMES[bk].resources) {
+          for (let rk in ALL_BIOMES[bk].resources) {
             if (allRes.indexOf(rk) === -1) allRes.push(rk);
           }
         }
@@ -2769,11 +2612,11 @@ function executeCommand(cmd) {
   let command = parts[0].toLowerCase().replace('/', '');
   
   if(command === 'time' && parts[1] === 'day'){
-    cycleTime = DAY_DURATION * 0.15;
+    cycleTime = CONFIG.DAY_NIGHT.dayDuration * 0.15;
     addConsoleLine('☀️ Время установлено на день');
   }
   else if(command === 'time' && parts[1] === 'night'){
-    cycleTime = DAY_DURATION + NIGHT_DURATION * 0.3;
+    cycleTime = CONFIG.DAY_NIGHT.dayDuration + CONFIG.DAY_NIGHT.nightDuration * 0.3;
     addConsoleLine('Время установлено на ночь');
   }
   else if(command === 'time' && !isNaN(parts[1])){
@@ -2788,7 +2631,7 @@ function executeCommand(cmd) {
       for (let ty = player.ty - range; ty <= player.ty + range; ty++) {
         let tile = getTile(tx, ty);
         if (tile.base === 1) continue;
-        let biomeConfig = BIOMES[tile.biome];
+        let biomeConfig = ALL_BIOMES[tile.biome];
         if (!biomeConfig || !biomeConfig.resources) continue;
         if (biomeConfig.resources[type]) {
           let res = biomeConfig.resources[type];
@@ -2862,11 +2705,100 @@ function addConsoleLine(text){
   output.innerHTML = '<div>' + text + '</div>' + output.innerHTML;
   output.scrollTop = output.scrollHeight;
 }
+
+// Поиск пути (простой BFS)
+function findPath(startTX, startTY, endTX, endTY, maxSteps) {
+  maxSteps = maxSteps || 100;
+  
+  let visited = {};
+  let queue = [{ tx: startTX, ty: startTY, path: [] }];
+  visited[startTX + ',' + startTY] = true;
+  
+  let dirs = [
+    { dx: 0, dy: -1 }, // вверх
+    { dx: 1, dy: 0 },  // право
+    { dx: 0, dy: 1 },  // низ
+    { dx: -1, dy: 0 }, // лево
+  ];
+  
+  // Перемешиваем направления для более естественного движения
+  if (Math.random() < 0.5) dirs.reverse();
+  
+  while (queue.length > 0) {
+    let current = queue.shift();
+    
+    if (current.path.length >= maxSteps) continue;
+    
+    // Если пришли — возвращаем путь
+    if (current.tx === endTX && current.ty === endTY) {
+      return current.path;
+    }
+    
+    for (let d = 0; d < dirs.length; d++) {
+      let nx = current.tx + dirs[d].dx;
+      let ny = current.ty + dirs[d].dy;
+      let key = nx + ',' + ny;
+      
+      if (visited[key]) continue;
+      
+      let tile = getTile(nx, ny);
+      // Не проходим воду и стены пещер
+      if (tile.base === 1) continue;
+      if (inCave && tile.base === -1) continue;
+      
+      // Проверяем что на клетке нет сущности-препятствия
+      let blocked = false;
+      let allEnts = getVisibleEntities();
+      for (let i = 0; i < allEnts.length; i++) {
+        let e = allEnts[i];
+        if (e.tx === nx && e.ty === ny && e.hp > 0 && 
+            e.type !== 'campfire' && e.type !== 'chest' && 
+            e.type !== 'dropped_item' && e.type !== 'resource' &&
+            e.type !== 'tent' && e.type !== 'cave_entrance' && e.type !== 'cave_exit') {
+          blocked = true;
+          break;
+        }
+      }
+      if (nx === player.tx && ny === player.ty) blocked = true;
+      if (blocked) continue;
+      
+      visited[key] = true;
+      queue.push({
+        tx: nx,
+        ty: ny,
+        path: current.path.concat([{ tx: nx, ty: ny }])
+      });
+    }
+  }
+  
+  return null; // путь не найден
+}
+
+// Маршрут игрока
+let playerPath = [];
+let pathTarget = null; // для визуального индикатора
+
 function handleInput(now){
   if(paused||player.hp<=0||openChest)return;
+  
+  // Если есть маршрут — идём по нему
+  if (playerPath.length > 0 && Math.abs(player.rx - player.tx) < 0.01 && Math.abs(player.ry - player.ty) < 0.01) {
+    // Берём следующий шаг
+    let nextStep = playerPath.shift();
+    player.tx = nextStep.tx;
+    player.ty = nextStep.ty;
+    player.lastMoveTime = now;
+    
+    // Если маршрут закончился
+    if (playerPath.length === 0) {
+      pathTarget = null;
+    }
+  }
+  
+  // Движение к целевой клетке (плавное)
   if(Math.abs(player.rx-player.tx)>0.01||Math.abs(player.ry-player.ty)>0.01){
     let dt=(now-player.lastMoveTime)/1000;if(dt>0.1)dt=0.1;
-    let speed=MOVE_SPEED*dt,ddx=player.tx-player.rx,ddy=player.ty-player.ry,dist=Math.sqrt(ddx*ddx+ddy*ddy);
+    let speed=CONFIG.PLAYER.moveSpeed*dt,ddx=player.tx-player.rx,ddy=player.ty-player.ry,dist=Math.sqrt(ddx*ddx+ddy*ddy);
     if(dist<=speed){player.rx=player.tx;player.ry=player.ty;player.moving=false;}
     else{player.rx+=(ddx/dist)*speed;player.ry+=(ddy/dist)*speed;player.moving=true;}
     player.lastMoveTime=now;
@@ -2874,6 +2806,11 @@ function handleInput(now){
     camX+=(canvas.width/2-pos.x)*0.3;camY+=(canvas.height/2-pos.y)*0.3;
     return;
   }
+  
+  // Если двигались по маршруту — ждём следующего шага
+  if (playerPath.length > 0) return;
+  
+  // Клавиатурное управление (только если нет маршрута)
   player.moving=false;
   let nx=player.tx,ny=player.ty;
   if(keys['w']||keys['ц']||keys['arrowup'])ny--;
@@ -2886,16 +2823,60 @@ function handleInput(now){
     if(inCave && tile.base===-1)return;
     player.tx=nx;player.ty=ny;player.lastMoveTime=now;
     unloadFarChunks();
+    
+    // Сбрасываем маршрут если игрок пошёл клавишами
+    playerPath = [];
+    pathTarget = null;
+    player._attackOnArrival = null;
   }
 }
 
 // UI
 let levelUpPanel=null;
 function createLevelUpPanel(){if(levelUpPanel)return;levelUpPanel=document.createElement('div');levelUpPanel.id='levelup-panel';levelUpPanel.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;display:none;justify-content:center;align-items:center;z-index:110;pointer-events:auto;background:rgba(0,0,0,0.75);';levelUpPanel.innerHTML='<div style="background:#1a1a2e;border:2px solid #ffcc00;border-radius:16px;padding:25px 35px;text-align:center;color:#fff;box-shadow:0 0 40px rgba(255,200,0,0.4);"><h2 style="color:#ffcc00;margin:0 0 10px 0;font-size:24px;">🎉 УРОВЕНЬ ПОВЫШЕН!</h2><p style="margin:5px 0;font-size:14px;" id="lvl-stats"></p><p style="margin:15px 0 10px 0;font-size:16px;color:#ffcc00;">Выбери улучшение:</p><div id="lvl-choices"></div></div>';document.body.appendChild(levelUpPanel);}
-function showLevelUp(){createLevelUpPanel();let panel=document.getElementById('levelup-panel'),statsEl=document.getElementById('lvl-stats'),choicesEl=document.getElementById('lvl-choices');statsEl.textContent='Уровень '+player.level+' | HP: '+player.hp+'/'+player.maxHp+' | Урон: '+player.damage;let choices=[{name:'❤️ +20 HP',action:function(){player.maxHp+=20;player.hp+=20;addLog('❤️ HP увеличен!');}},{name:'⚔️ +5 урона',action:function(){player.damage+=5;addLog('⚔️ Урон увеличен!');}},{name:'🎯 +0.5 дальности',action:function(){player.attackRange+=0.5;addLog('🎯 Дальность увеличена!');}},{name:'🚶 -15 мс',action:function(){player.moveDelay=Math.max(30,player.moveDelay-15);addLog('🚶 Скорость увеличена!');}},{name:'🕐 -50 мс кулдауна',action:function(){player.attackCooldownTime=Math.max(100,player.attackCooldownTime-50);addLog('🕐 Кулдаун уменьшен!');}}];choicesEl.innerHTML='';for(let i=0;i<choices.length;i++){let btn=document.createElement('button');btn.textContent=choices[i].name;btn.style.cssText='display:block;width:100%;margin:6px 0;padding:10px 15px;font-size:14px;font-family:monospace;background:#2a2a4a;color:#fff;border:2px solid #666;border-radius:8px;cursor:pointer;transition:all 0.2s;';btn.addEventListener('mouseenter',function(){this.style.background='#3a3a6a';this.style.borderColor='#ffcc00';});btn.addEventListener('mouseleave',function(){this.style.background='#2a2a4a';this.style.borderColor='#666';});(function(action){btn.addEventListener('click',function(){action();player.pendingLevelUps--;if(player.pendingLevelUps>0){statsEl.textContent='Уровень '+player.level+' | HP: '+player.hp+'/'+player.maxHp+' | Урон: '+player.damage;}else{panel.style.display='none';paused=false;document.getElementById('pause-menu').classList.remove('active');}updateInventoryUI();});})(choices[i].action);choicesEl.appendChild(btn);}panel.style.display='flex';paused=true;}
+function showLevelUp(){
+  createLevelUpPanel();
+  let panel=document.getElementById('levelup-panel'),statsEl=document.getElementById('lvl-stats'),choicesEl=document.getElementById('lvl-choices');
+  statsEl.textContent='Уровень '+player.level+' | HP: '+player.hp+'/'+player.maxHp+' | Урон: '+player.damage;
+let choices=[
+  {name:'❤️ +' + CONFIG.LEVELING.choiceHp + ' HP', action:function(){player.maxHp += CONFIG.LEVELING.choiceHp; player.hp += CONFIG.LEVELING.choiceHp; addLog('❤️ HP увеличен!');}},
+  {name:'⚔️ +' + CONFIG.LEVELING.choiceDamage + ' урона', action:function(){player.damage += CONFIG.LEVELING.choiceDamage; addLog('⚔️ Урон увеличен!');}},
+  {name:'🎯 +' + CONFIG.LEVELING.choiceRange + ' дальности', action:function(){player.attackRange += CONFIG.LEVELING.choiceRange; addLog('🎯 Дальность увеличена!');}},
+  {name:'🚶 -' + CONFIG.LEVELING.choiceSpeed + ' мс', action:function(){player.moveDelay = Math.max(30, player.moveDelay - CONFIG.LEVELING.choiceSpeed); addLog('🚶 Скорость увеличена!');}},
+  {name:'🕐 -' + CONFIG.LEVELING.choiceCooldown + ' мс кулдауна', action:function(){player.attackCooldownTime = Math.max(100, player.attackCooldownTime - CONFIG.LEVELING.choiceCooldown); addLog('🕐 Кулдаун уменьшен!');}}
+];
+  choicesEl.innerHTML='';
+  for(let i=0;i<choices.length;i++){
+    let btn=document.createElement('button');
+    btn.textContent=choices[i].name;btn.style.cssText='display:block;width:100%;margin:6px 0;padding:10px 15px;font-size:14px;font-family:monospace;background:#2a2a4a;color:#fff;border:2px solid #666;border-radius:8px;cursor:pointer;transition:all 0.2s;';
+    btn.addEventListener('mouseenter',function(){this.style.background='#3a3a6a';this.style.borderColor='#ffcc00';});
+    btn.addEventListener('mouseleave',function(){this.style.background='#2a2a4a';this.style.borderColor='#666';});(function(action){btn.addEventListener('click',function(){action();player.pendingLevelUps--;if(player.pendingLevelUps>0){statsEl.textContent='Уровень '+player.level+' | HP: '+player.hp+'/'+player.maxHp+' | Урон: '+player.damage;}else{panel.style.display='none';paused=false;document.getElementById('pause-menu').classList.remove('active');}updateInventoryUI();});})(choices[i].action);choicesEl.appendChild(btn);}panel.style.display='flex';paused=true;}
 function togglePause(){if(player.pendingLevelUps>0)return;let cp=document.getElementById('craft-panel');if(cp&&cp.style.display==='flex')cp.style.display='none';paused=!paused;if(paused)document.getElementById('pause-menu').classList.add('active');else document.getElementById('pause-menu').classList.remove('active');}
 document.getElementById('btn-continue').addEventListener('click',togglePause);
-document.getElementById('btn-new-world').addEventListener('click',function(){SEED=Math.floor(Math.random()*1000000);chunks={};player.tx=0;player.ty=0;let safety=0;while(getTile(player.tx,player.ty).base===1&&safety<100){player.tx=Math.floor(Math.random()*20)-10;player.ty=Math.floor(Math.random()*20)-10;safety++;}player.rx=player.tx;player.ry=player.ty;player.hp=player.maxHp=100;player.damage=15;player.attackRange=1.5;player.attackCooldownTime=300;player.moveDelay=100;player.level=1;player.xp=0;player.xpToNext=getXpForLevel(1);player.pendingLevelUps=0;player.attackCooldown=0;player.moving=false;inventory=[null,null,null,null,null,null,null,null];selectedSlot=0;player.heldItem=null;openChest=null;cycleTime=DAY_DURATION*0.1;lastTod=getTimeOfDay();logMessages=[];document.getElementById('death-screen').classList.remove('active');if(levelUpPanel)levelUpPanel.style.display='none';let cp=document.getElementById('craft-panel');if(cp)cp.style.display='none';let chp=document.getElementById('chest-panel');if(chp)chp.style.display='none';let pos=tileToScreen(0,0);camX=canvas.width/2-pos.x;camY=canvas.height/2-pos.y;document.getElementById('pause-menu').classList.remove('active');paused=false;updateInventoryUI();addLog('🔄 Новый мир! Сид: '+SEED);});
+document.getElementById('btn-new-world').addEventListener('click',function(){SEED=Math.floor(Math.random()*1000000);chunks={};
+player.tx=0;
+player.ty=0;
+let safety=0;while(getTile(player.tx,player.ty).base===1&&safety<100){player.tx=Math.floor(Math.random()*20)-10;player.ty=Math.floor(Math.random()*20)-10;safety++;}player.rx=player.tx;player.ry=player.ty;
+player.hp = CONFIG.PLAYER.startHp;
+player.maxHp = CONFIG.PLAYER.startMaxHp;
+player.damage = CONFIG.PLAYER.startDamage;
+player.attackRange = CONFIG.PLAYER.startAttackRange;
+player.attackCooldownTime = CONFIG.PLAYER.startAttackCooldown;
+player.moveDelay = CONFIG.PLAYER.startMoveDelay;
+player.level=1;
+player.xp=0;
+player.xpToNext=getXpForLevel(1);
+player.pendingLevelUps=0;
+player.attackCooldown=0;
+player.moving=false;
+inventory=[null,null,null,null,null,null,null,null];
+selectedSlot=0;
+player.heldItem=null;
+openChest=null;
+cycleTime=CONFIG.DAY_NIGHT.dayDuration*0.1;
+lastTod=getTimeOfDay();
+logMessages=[];
+document.getElementById('death-screen').classList.remove('active');if(levelUpPanel)levelUpPanel.style.display='none';let cp=document.getElementById('craft-panel');if(cp)cp.style.display='none';let chp=document.getElementById('chest-panel');if(chp)chp.style.display='none';let pos=tileToScreen(0,0);camX=canvas.width/2-pos.x;camY=canvas.height/2-pos.y;document.getElementById('pause-menu').classList.remove('active');paused=false;updateInventoryUI();addLog('🔄 Новый мир! Сид: '+SEED);});
 document.getElementById('btn-respawn').addEventListener('click',function(){player.hp=player.maxHp;player.attackCooldown=0;document.getElementById('death-screen').classList.remove('active');addLog('🔄 Возрождение!');});
 
 // Цикл
@@ -2909,7 +2890,7 @@ function updateDebugPanel() {
   
   let tod = getTimeOfDay();
   let timeLeft = tod === 'day' 
-    ? Math.ceil((DAY_DURATION - cycleTime) / 1000) 
+    ? Math.ceil((CONFIG.DAY_NIGHT.dayDuration - cycleTime) / 1000) 
     : Math.ceil((FULL_CYCLE - cycleTime) / 1000);
   
   panel.innerHTML = 
@@ -2921,7 +2902,7 @@ function updateDebugPanel() {
     'Biome: ' + getTile(player.tx, player.ty).biome + '\n' +
     'Time: ' + (tod === 'day' ? 'Day' : 'Night') + ' (' + Math.floor(getDayProgress() * 100) + '% - ' + timeLeft + ' сек)\n' +
     'All time: ' + Math.floor(cycleTime / 1000) + ' сек\n' +
-    'Uploaded: Chunks: ' + Object.keys(chunks).length + '(' + Math.floor(player.tx/CHUNK_SIZE) + ', ' + Math.floor(player.ty/CHUNK_SIZE) + ')' + '\n' + 
+    'Uploaded: Chunks: ' + Object.keys(chunks).length + '(' + Math.floor(player.tx/CONFIG.CHUNK_SIZE) + ', ' + Math.floor(player.ty/CONFIG.CHUNK_SIZE) + ')' + '\n' + 
     'Entities: ' + getVisibleEntities().length + '; Tiles: ' + collectVisibleObjects().tiles.length + '\n' +
     '──────────\n' +
     'Player:\n' +
@@ -2935,7 +2916,10 @@ function updateDebugPanel() {
 function gameLoop(ts){
   let dt=lastTime?ts-lastTime:16;
   lastTime=ts;
-  
+    // Сбрасываем кэш сущностей на каждом кадре
+  cachedVisibleEntities = null;
+  cachedVisibleEntitiesFrame = -1;
+
 if(!paused){
     cycleTime=(cycleTime+dt)%FULL_CYCLE;
     validateMonstersForTimeOfDay();
@@ -2951,17 +2935,19 @@ for (let e of all) {
 }
     handleInput(ts);
     if(player.attackCooldown>0)player.attackCooldown-=dt;
-    let objs=collectVisibleObjects();
+    // Получаем сущности ОДИН раз за кадр (закэшируется)
+    let allEnts = getVisibleEntities();
     frameSkipCounter++;
-    for(let i=0;i<objs.entities.length;i++){
-      let e=objs.entities[i];
-      if(e.hp>0&&(e.type==='monster'||e.type==='peaceful')){
-        if(e.attackCooldown>0)e.attackCooldown-=dt;
-        if(settings.aiSkipFar && e.ai && e.ai.state === 'idle'){
+    for (let i = 0; i < allEnts.length; i++) {
+      let e = allEnts[i];
+      if (e.hp > 0 && (e.type === 'monster' || e.type === 'peaceful')) {
+        if (e.attackCooldown > 0) e.attackCooldown -= dt;
+        if (settings.aiSkipFar && e.ai && e.ai.state === 'idle') {
           let dist = Math.abs(e.tx - player.tx) + Math.abs(e.ty - player.ty);
-          if(dist > settings.aiSkipDistance && frameSkipCounter % 3 !== 0) continue;
+          if (dist > settings.aiSkipDistance && frameSkipCounter % 3 !== 0) continue;
         }
-        updateAI(e,dt,e.type==='peaceful');
+        // Передаём закэшированный список
+        updateAI(e, dt, allEnts, e.type === 'peaceful');
       }
     }
     cleanupTimer+=dt;
@@ -3070,10 +3056,10 @@ for (let e of all) {
 
 function unloadFarChunks() {
   let range = settings.renderDistance + 1;
-  let minCX = Math.floor((player.tx - range) / CHUNK_SIZE);
-  let maxCX = Math.floor((player.tx + range) / CHUNK_SIZE);
-  let minCY = Math.floor((player.ty - range) / CHUNK_SIZE);
-  let maxCY = Math.floor((player.ty + range) / CHUNK_SIZE);
+  let minCX = Math.floor((player.tx - range) / CONFIG.CHUNK_SIZE);
+  let maxCX = Math.floor((player.tx + range) / CONFIG.CHUNK_SIZE);
+  let minCY = Math.floor((player.ty - range) / CONFIG.CHUNK_SIZE);
+  let maxCY = Math.floor((player.ty + range) / CONFIG.CHUNK_SIZE);
   
   let before = Object.keys(chunks).length;
   for (let key in chunks) {
@@ -3275,26 +3261,51 @@ document.getElementById('btn-settings').addEventListener('click', function() {
   openSettings();
 });
 
-player.tx=0;player.ty=0;
-// Проверка что не на воде при первом спавне
-let safety=0;
-while(getTile(player.tx,player.ty).base===1 && safety<100){
-  player.tx=Math.floor(Math.random()*20)-10;
-  player.ty=Math.floor(Math.random()*20)-10;
-  safety++;
-}
-player.rx=player.tx;player.ry=player.ty;
-player.xpToNext=getXpForLevel(1);
-player.xpToNext=getXpForLevel(1);
-let startPos=tileToScreen(player.tx, player.ty);
-camX=canvas.width/2-startPos.x;
-camY=canvas.height/2-startPos.y;
 async function startGame() {
   await loadJSON();
+  
+  TILE_HW = CONFIG.TILE_W / 2;
+  TILE_HH = CONFIG.TILE_H / 2;
+  FULL_CYCLE = CONFIG.DAY_NIGHT.dayDuration + CONFIG.DAY_NIGHT.nightDuration;
+  cycleTime = CONFIG.DAY_NIGHT.dayDuration * 0.1;
+  
+  // Создаём игрока после загрузки CONFIG
+  player = {
+    rx: 0, ry: 0, tx: 0, ty: 0,
+    hp: CONFIG.PLAYER.startHp,
+    maxHp: CONFIG.PLAYER.startMaxHp,
+    damage: CONFIG.PLAYER.startDamage,
+    attackRange: CONFIG.PLAYER.startAttackRange,
+    attackCooldown: 0,
+    attackCooldownTime: CONFIG.PLAYER.startAttackCooldown,
+    lastMoveTime: 0,
+    moveDelay: CONFIG.PLAYER.startMoveDelay,
+    moving: false,
+    level: 1, xp: 0,
+    xpToNext: CONFIG.LEVELING.baseXp,
+    pendingLevelUps: 0,
+    heldItem: null
+  };
+  
+  // Переносим спавн после создания player
+  player.tx = 0; player.ty = 0;
+  let safety = 0;
+  while (getTile(player.tx, player.ty).base === 1 && safety < CONFIG.MISC.startSpawnMaxAttempts) {
+    player.tx = Math.floor(Math.random() * 20) - 10;
+    player.ty = Math.floor(Math.random() * 20) - 10;
+    safety++;
+  }
+  player.rx = player.tx; player.ry = player.ty;
+  
+  let startPos = tileToScreen(player.tx, player.ty);
+  camX = canvas.width / 2 - startPos.x;
+  camY = canvas.height / 2 - startPos.y;
+  
   loadTextures().then(function(){
     requestAnimationFrame(gameLoop);
     addLog('🎮 Готово!');
     updateInventoryUI();
   });
 }
+
 startGame();

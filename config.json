@@ -1,0 +1,155 @@
+{
+  "TILE_W": 64,
+  "TILE_H": 32,
+  "CHUNK_SIZE": 8,
+  
+  "PLAYER": {
+    "startHp": 100,
+    "startMaxHp": 100,
+    "startDamage": 10,
+    "startAttackRange": 1.5,
+    "startMoveDelay": 100,
+    "startAttackCooldown": 500,
+    "maxInventorySlots": 8,
+    "maxStack": 99,
+    "moveSpeed": 5.0
+  },
+  
+  "LEVELING": {
+    "baseXp": 50,
+    "xpMultiplier": 1.5,
+    "hpPerLevel": 5,
+    "damagePerLevel": 1,
+    "choiceHp": 20,
+    "choiceDamage": 5,
+    "choiceRange": 0.5,
+    "choiceSpeed": 15,
+    "choiceCooldown": 50
+  },
+  
+  "DAY_NIGHT": {
+    "dayDuration": 300000,
+    "nightDuration": 300000,
+    "transitionEdge": 0.1,
+    "nightAlpha": 0.85,
+    "dawnDuskAlpha": 0.7,
+    "sunburnDamage": 3,
+    "sunburnInterval": 500
+  },
+  
+  "CAMPFIRE": {
+    "baseLightRadius": 1.0,
+    "maxLightRadius": 4.0,
+    "fuelPerLog": 0.3,
+    "maxFuelTime": 60000
+  },
+  
+  "DROP": {
+    "lifetime": 180000,
+    "maxItemsPerBag": 20,
+    "pickupClickDist": 25
+  },
+  
+  "AI": {
+    "defaultForgetTime": 5000,
+    "fleeDistance": 5,
+    "fleeDuration": 2000,
+    "animalFleeDuration": 3000,
+    "animalFleeHpPercent": 0.2,
+    "wanderRangePeaceful": 4,
+    "wanderRangeHostile": 6,
+    "retaliationDelay": 250,
+    "tentDetectionReduction": 2
+  },
+  
+  "CAVES": {
+    "tunnelThreshold": 0.4,
+    "wallColor": "#0a0a0a"
+  },
+  
+  "PERFORMANCE": {
+    "autoLowFps": 25,
+    "autoMedFps": 40,
+    "autoHighFps": 50,
+    "chunkCleanupInterval": 5000,
+    "unloadMargin": 1,
+    "presets": {
+      "low": {
+        "renderDistance": 8,
+        "showGrassDetails": false,
+        "showParticles": false,
+        "smoothBiomes": false,
+        "blendStrength": 0,
+        "aiSkipFar": true,
+        "aiSkipDistance": 5
+      },
+      "medium": {
+        "renderDistance": 16,
+        "showGrassDetails": true,
+        "showParticles": true,
+        "smoothBiomes": true,
+        "blendStrength": 2,
+        "aiSkipFar": true,
+        "aiSkipDistance": 10
+      },
+      "high": {
+        "renderDistance": 24,
+        "showGrassDetails": true,
+        "showParticles": true,
+        "smoothBiomes": true,
+        "blendStrength": 4,
+        "aiSkipFar": false,
+        "aiSkipDistance": 0
+      }
+    },
+    "defaultSettings": {
+      "renderDistance": 16,
+      "aiSkipFar": true,
+      "aiSkipDistance": 10,
+      "showGrassDetails": true,
+      "showParticles": true,
+      "smoothBiomes": true,
+      "blendStrength": 4,
+      "showTextures": true,
+      "qualityMode": "auto",
+      "qualityPreset": "medium"
+    }
+  },
+  
+  "ANIMATIONS": {
+    "attackDashDuration": 150,
+    "attackDashOffset": 5,
+    "playerAttackDashOffset": 6,
+    "hurtFlashDuration": 200,
+    "hurtKnockback": 4,
+    "deathDuration": 1000,
+    "deathRemoveDelay": 1500
+  },
+  
+  "RENDER": {
+    "fogWidth": 40,
+    "fogColor": "rgba(180, 190, 210, 0.2)",
+    "starCount": 50,
+    "maxZoom": 3.0,
+    "minZoom": 1.0,
+    "zoomSpeed": 0.001,
+    "blendLevels": [
+      { "dist": 1, "amount": 0.34 },
+      { "dist": 2, "amount": 0.20 },
+      { "dist": 3, "amount": 0.14 },
+      { "dist": 4, "amount": 0.09 }
+    ]
+  },
+  
+  "UI": {
+    "logMaxMessages": 6,
+    "consoleMaxHistory": 50,
+    "consoleFindRange": 100,
+    "consoleFindMaxResults": 5
+  },
+  
+  "MISC": {
+    "treeSpiderChance": 0.15,
+    "startSpawnMaxAttempts": 100
+  }
+}
