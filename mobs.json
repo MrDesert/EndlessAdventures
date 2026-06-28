@@ -157,6 +157,7 @@
     "name": "Волк", 
     "category": "animal",
     "texKey": "monster_wolf", 
+    "h":10,
     "aggroChance": 0.3, 
     "hp": 22, 
     "damage": 9, 
@@ -228,7 +229,8 @@
 },
 "boar": {
     "name": "Кабан", 
-    "texKey": "monster_boar", 
+    "texKey": "monster_boar",
+    "h":7, 
     "type": "neutral",
     "aggroChance": 0.1,
     "hp": 30, 
@@ -251,7 +253,8 @@
 },
 "spider": {
     "name": "🕷️ Паук", 
-    "texKey": "monster_spider", 
+    "texKey": "monster_spider",
+    "h":9, 
     "type": "hostile",
     "hp": 15, 
     "damage": 8, 
@@ -274,6 +277,7 @@
 "snake": {
     "name": "Змея", 
     "texKey": "monster_snake", 
+    "h":5,
     "type": "neutral",
     "aggroChance": 0.5,
     "hp": 15, 
@@ -329,6 +333,7 @@
 "rabbit": {
     "name": "Кролик", 
     "texKey": "animal_rabbit", 
+    "h":6,
     "type": "peaceful",
     "aggroChance": 0.95, 
     "huntTargets": ["wolf", "player"],
@@ -350,7 +355,8 @@
 },
 "chicken": {
     "name": "Курица", 
-    "texKey": "animal_chicken", 
+    "texKey": "animal_chicken",
+    "h":6, 
     "type": "peaceful",
     "hp": 3, 
     "color": "#fff",

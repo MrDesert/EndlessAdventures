@@ -33,5 +33,12 @@
     ],
     "placeable": true,
     "isTent": true
-  }
+  },
+  "boat": {
+  "result": { "itemKey": "boat", "count": 1 },
+  "ingredients": [
+    { "itemKey": "wood", "count": 4 },
+    { "itemKey": "stick", "count": 2 }
+  ]
+}
 }

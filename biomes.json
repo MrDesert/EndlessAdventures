@@ -12,7 +12,8 @@
     "resources": {
       "snow_tree": { "chance": 0.22, "type": "snow_tree" },
       "ice_rock": { "chance": 0.30, "type": "ice_rock", "minChance": 0.22 },
-      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.001 },
+      "loot_bag": { "chance": 0.002, "type": "loot_bag", "minChance": 0.001 }
     }
   },
   "taiga": {
@@ -22,7 +23,8 @@
     "colorBy": "temperature",
     "resources": {
       "pine": { "chance": 0.35, "type": "pine" },
-      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.003 },
+      "loot_bag": { "chance": 0.002, "type": "loot_bag", "minChance": 0.003 }
     }
   },
   "sand": {
@@ -32,7 +34,8 @@
     "colorBy": "temperature",
     "resources": {
       "cactus": { "chance": 0.10, "type": "cactus" },
-      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.001 },
+      "loot_bag": { "chance": 0.002, "type": "loot_bag", "minChance": 0.001 }
     }
   },
   "stone": {
@@ -42,7 +45,8 @@
     "resources": {
       "stone": { "chance": 0.14, "type": "stone" },
       "ore": { "chance": 0.24, "type": "ore", "minChance": 0.14 },
-      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.008 },
+      "loot_bag": { "chance": 0.002, "type": "loot_bag", "minChance": 0.001 }
     }
   },
   "mixed_forest": {
@@ -53,7 +57,8 @@
     "resources": {
       "tree": { "chance": 0.18, "type": "tree" },
       "pine": { "chance": 0.35, "type": "pine", "minChance": 0.18 },
-      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.003 },
+      "loot_bag": { "chance": 0.002, "type": "loot_bag", "minChance": 0.002 }
     }
   },
   "forest": {
@@ -63,7 +68,8 @@
     "colorBy": "humidity",
     "resources": {
       "tree": { "chance": 0.40, "type": "tree" },
-      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.003 },
+      "loot_bag": { "chance": 0.002, "type": "loot_bag", "minChance": 0.002 }
     }
   },
   "grass": {
@@ -75,7 +81,8 @@
       "tree": { "chance": 0.06, "type": "tree" },
       "bush": { "chance": 0.10, "type": "bush", "minChance": 0.06 },
       "wheat": { "chance": 0.14, "type": "wheat", "minChance": 0.10 },
-      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.004 }
+      "cave_entrance": { "chance": 0.005, "type": "cave_entrance", "minChance": 0.001 },
+      "loot_bag": { "chance": 0.002, "type": "loot_bag", "minChance": 0.003 }
     }
   },
   "cave": {
@@ -84,7 +91,8 @@
     "condition": "false",
     "resources": {
       "stone": { "chance": 0.06, "type": "stone" },
-      "ore": { "chance": 0.10, "type": "ore", "minChance": 0.06 }
+      "ore": { "chance": 0.10, "type": "ore", "minChance": 0.06 },
+      "loot_bag": { "chance": 0.002, "type": "loot_bag", "minChance": 0.001 }
     }
   }
 }

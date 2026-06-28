@@ -29,7 +29,11 @@
     ]
   },
   "cactus": {
-    "name": "Кактус", "texKey": "cactus", "hp": 15, "color": "#5a8a3a", "h": 12,
+    "name": "Кактус", 
+    "texKey": "cactus", 
+    "hp": 15, 
+    "color": "#5a8a3a", 
+    "h": 9,
     "drops": [
       {"itemKey": "cactus", "chance": 1.0, "count": 1},
       {"itemKey": "water", "chance": 0.5, "count": 1}
@@ -75,5 +79,45 @@
     "color": "#1a1a1a",
     "h": 6,
     "drops": []
-  }
+  },
+  "boat": {
+  "name": "🛶 Лодка",
+  "texKey": "item_boat",
+  "hp": 999,
+  "color": "#8B4513",
+  "h": 5,
+  "drops": []
+},
+"chest": {
+  "name": "📦 Сундук",
+  "texKey": "chest",
+  "hp": 999,
+  "color": "#8B4513",
+  "h": 8,
+  "drops": []
+},
+"campfire": {
+  "name": "🔥 Костёр",
+  "texKey": "campfire",
+  "hp": 999,
+  "color": "#ff6600",
+  "h": 6,
+  "drops": []
+},
+"tent": {
+  "name": "⛺ Палатка",
+  "texKey": "tent",
+  "hp": 999,
+  "color": "#a08860",
+  "h": 14,
+  "drops": []
+},
+"loot_bag": {
+  "name": "📦 Мешок",
+  "texKey": "loot_bag",
+  "hp": 999,
+  "color": "#ffcc00",
+  "h": 4,
+  "drops": []
+}
 }

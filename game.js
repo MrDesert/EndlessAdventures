@@ -9,7 +9,10 @@ let settings = {
   blendStrength: 4, // 1, 2 или 3 (радиус смешивания)
   showTextures: true,  // показывать текстуры
   qualityMode: 'auto',  // 'auto', 'presets', 'manual'           // авто-подстройка качества
-  qualityPreset: 'medium'      // 'low', 'medium', 'high'
+  qualityPreset: 'medium',      // 'low', 'medium', 'high'
+    showTextures: true,
+  showHitboxes: false,      // ← добавить
+  qualityMode: 'auto'
 };
 
 let TILE_HW, TILE_HH, FULL_CYCLE;
@@ -79,30 +82,47 @@ const ALL_RECIPES = {};
 let CONFIG = {};
 const ALL_BIOMES = {};
 
-async function loadJSON(){
-    const [mobs, items, resources, textures, recipes, biomes, config] = await Promise.all([
-        fetch('./mobs.json').then(r => r.json()),
-        fetch('items.json').then(r => r.json()),
-        fetch('resources.json').then(r => r.json()),
-        fetch('textures.json').then(r => r.json()),
-        fetch('recipes.json').then(r => r.json()),
-        fetch('biomes.json').then(r => r.json()),
-        fetch('config.json').then(r => r.json())
-    ]);
-    Object.assign(CONFIG, config);
-    Object.assign(ALL_MOBS, mobs);
-    Object.assign(ALL_ITEMS, items);
-    Object.assign(ALL_RESOURCES, resources);
-    Object.assign(ALL_TEXTURES, textures);
-    Object.assign(ALL_RECIPES, recipes);
-    
-    // Преобразуем строки condition в функции
-    for (let key in biomes) {
-        if (typeof biomes[key].condition === 'string') {
-            biomes[key].condition = new Function('t', 'h', 'w', 'return ' + biomes[key].condition);
-        }
+let textures = {}; // для загруженных изображений
+
+async function loadAssets() {
+  // Загружаем всё параллельно
+  const [mobs, items, resources, texturesData, recipes, biomes, config] = await Promise.all([
+    fetch('./mobs.json').then(r => r.json()),
+    fetch('items.json').then(r => r.json()),
+    fetch('resources.json').then(r => r.json()),
+    fetch('textures.json').then(r => r.json()),
+    fetch('recipes.json').then(r => r.json()),
+    fetch('biomes.json').then(r => r.json()),
+    fetch('config.json').then(r => r.json())
+  ]);
+  
+  // Заполняем данные
+  Object.assign(CONFIG, config);
+  Object.assign(ALL_MOBS, mobs);
+  Object.assign(ALL_ITEMS, items);
+  Object.assign(ALL_RESOURCES, resources);
+  Object.assign(ALL_TEXTURES, texturesData); // ← переименовано
+  Object.assign(ALL_RECIPES, recipes);
+  
+  // Преобразуем строки condition в функции
+  for (let key in biomes) {
+    if (typeof biomes[key].condition === 'string') {
+      biomes[key].condition = new Function('t', 'h', 'w', 'return ' + biomes[key].condition);
     }
-    Object.assign(ALL_BIOMES, biomes);
+  }
+  Object.assign(ALL_BIOMES, biomes);
+  
+  // Загружаем изображения текстур
+  let texturePromises = [];
+  for (let [key, path] of Object.entries(ALL_TEXTURES)) {
+    texturePromises.push(new Promise(function(resolve) {
+      let img = new Image();
+      img.onload = function() { textures[key] = img; resolve(); };
+      img.onerror = function() { resolve(); };
+      img.src = path;
+    }));
+  }
+  await Promise.all(texturePromises);
 }
 
 let openCampfire = null; // открытый костёр
@@ -438,19 +458,6 @@ function findItemData(itemName) {
   return null;
 }
 
-let textures = {};
-function loadTextures() {
-  let promises = [];
-  for (let [key, path] of Object.entries(ALL_TEXTURES)) {
-    promises.push(new Promise(function(resolve) {
-      let img = new Image();
-      img.onload = function() { textures[key] = img; resolve(); };
-      img.onerror = function() { resolve(); };
-      img.src = path;
-    }));
-  }
-  return Promise.all(promises);
-}
 function getTex(key) { return textures[key]; }
 
 // Шум
@@ -624,40 +631,22 @@ function dropItemOnGround(item, tx, ty) {
   let ck = Math.floor(tx/CONFIG.CHUNK_SIZE)+','+Math.floor(ty/CONFIG.CHUNK_SIZE);
   if (!chunks[ck]) ensureChunk(Math.floor(tx/CONFIG.CHUNK_SIZE), Math.floor(ty/CONFIG.CHUNK_SIZE));
   
-  // Ищем существующий мешок на этой клетке
-  let entities = chunks[ck].entities;
-  for (let i = 0; i < entities.length; i++) {
-    let e = entities[i];
-    if (e.type === 'dropped_item' && e.tx === tx && e.ty === ty && e.items && e.items.length < 20) {
-      // Добавляем в существующий мешок
-      let found = false;
-      for (let j = 0; j < e.items.length; j++) {
-        if (e.items[j].name === item.name) {
-          e.items[j].count += (item.count || 1);
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        e.items.push({ name: item.name, emoji: item.emoji, texKey: item.texKey, count: (item.count || 1) });
-      }
-      e.dropTime = Date.now(); // обновляем таймер
-      addLog('📦 Предмет упал на землю (в кучу)');
-      return;
-    }
-  }
+  // Рандомное смещение в ромбике
+  let offsetX = (Math.random() - 0.5) * 0.6;
+  let offsetY = (Math.random() - 0.5) * 0.6;
   
-  // Создаём новый мешок
-  entities.push(createEntity({
+  chunks[ck].entities.push(createEntity({
     type: 'dropped_item',
     tx: tx, ty: ty,
-    name: 'Мешок',
+    rx: tx + offsetX, ry: ty + offsetY,
+    name: item.name,
+    emoji: item.emoji,
+    texKey: item.texKey,
     hp: 999, maxHp: 999,
-    h: 4, color: '#ffcc00',
-    items: [{ name: item.name, emoji: item.emoji, texKey: item.texKey, count: (item.count || 1) }],
+    h: 6, color: '#ffffff',
+    item: { name: item.name, emoji: item.emoji, texKey: item.texKey, count: item.count || 1 },
     dropTime: Date.now()
   }));
-  addLog('📦 Предмет упал на землю');
 }
 
 function removeFromInventory(slotIndex, count) {
@@ -1006,7 +995,7 @@ entities.push(createEntity({
       chaseRange: mob.chaseRange || 4,
       attackRange: mob.attackRange || 1,
       attackCooldownTime: mob.attackCD || 500,
-      attackCooldown: 0, h: isPeaceful ? 10 : 16,
+      attackCooldown: 0, h: mob.h || (isPeaceful ? 10 : 16),
       color: mob.color,
       burnsInDay: mob.burnsInDay || false,
       neutral: mob.type === 'neutral',
@@ -1124,9 +1113,14 @@ function cleanupDead(){
         if(!e.items || e.items.length === 0) return false;
         return true;
       }
+      if(e.type==='loot_bag'){
+        if(e.dropTime && now - e.dropTime > CONFIG.DROP.lifetime) return false;
+        if(!e.items || e.items.length === 0) return false;
+        return true;
+      }
       if(e.hp <= 0){
-        if(e.deathTime && now - e.deathTime > 1500) return false; // удалить через 1.5 сек
-        return true; // ещё не полностью исчез
+        if(e.deathTime && now - e.deathTime > 1500) return false;
+        return true;
       }
       return true;
     });
@@ -1156,7 +1150,48 @@ function collectVisibleObjects(){
 
 // AI и бой
 
-
+function isClickOnEntity(mx, my, entity) {
+  let pos = tileToScreen(entity.rx, entity.ry);
+  let h = entity.h || (entity.type === 'peaceful' ? 10 : 16);
+  
+  if (settings.showTextures && entity.texKey) {
+    let img = getTex(entity.texKey);
+    if (img && img.width && img.height) {
+      let scale = (h * 1.2 * zoom) / img.height;
+      let dw = img.width * scale * zoom * 0.9;
+      let dh = img.height * scale * zoom * 0.9;
+      
+      let left = pos.x - dw / 2;
+      let right = pos.x + dw / 2;
+      let top = pos.y - dh * 1.05;
+      let bottom = pos.y;
+      
+      return mx > left && mx < right && my > top && my < bottom;
+    }
+  }
+  
+  // Fallback
+  let topY = pos.y - h * zoom;
+  if (entity.type === 'monster') {
+    let r = 6 * zoom;
+    let dx = mx - pos.x;
+    let dy = my - (topY + h * zoom * 0.4);
+    return Math.sqrt(dx * dx + dy * dy) < r;
+  } else if (entity.type === 'peaceful') {
+    let r = 5 * zoom;
+    let dx = mx - pos.x;
+    let dy = my - (topY + h * zoom * 0.4);
+    return Math.sqrt(dx * dx + dy * dy) < r;
+  } else if (entity.type === 'resource') {
+    let w = 6 * zoom;
+    return mx > pos.x - w && mx < pos.x + w && my > topY && my < topY + h * zoom * 0.6;
+  } else {
+    let r = 8 * zoom;
+    let dx = mx - pos.x;
+    let dy = my - (pos.y - 4 * zoom);
+    return Math.sqrt(dx * dx + dy * dy) < r;
+  }
+}
 function attackEntity(target) {
   if (player.attackCooldown > 0 || player.hp <= 0) return;
   if (target.hp <= 0 || target.type === 'campfire' || target.type === 'chest') return;
@@ -1266,19 +1301,30 @@ function attackEntity(target) {
 // Подбор предметов с земли
 function pickupDroppedItem(bag) {
   if (!bag.items || bag.items.length === 0) return;
-  let allPickedUp = true;
+  
   let remaining = [];
+  let pickedSomething = false;
+  
   for (let i = 0; i < bag.items.length; i++) {
     let item = bag.items[i];
     let added = addToInventory({ name: item.name, emoji: item.emoji, texKey: item.texKey, count: item.count });
-    if (!added) {
-      allPickedUp = false;
+    if (added) {
+      pickedSomething = true;
+    } else {
       remaining.push(item);
     }
   }
-  if (allPickedUp) {
+  
+  if (pickedSomething) {
+    cachedObjects = null;
+    addLog('📦 Предметы подобраны!');
+  }
+  
+  if (remaining.length === 0) {
+    // Всё подобрали — удаляем мешок
     bag.items = [];
-    bag.hp = 0; // помечаем на удаление
+    bag.hp = -1;
+    bag.deathTime = Date.now();
   } else {
     bag.items = remaining;
   }
@@ -1353,21 +1399,71 @@ function toggleCraftMenu() {
 
 function placeItem(typeKey, color, radius) {
   let nx = player.tx, ny = player.ty;
-  if (getTile(nx, ny).base === 1) { addLog('❌ Нельзя ставить на воде!'); return false; }
+  
+  // Лодка — только на воду, остальное — только не на воду
+  if (typeKey === 'boat') {
+    if (getTile(nx, ny).base !== 1) { addLog('❌ Лодку можно ставить только на воду!'); return false; }
+  } else {
+    if (getTile(nx, ny).base === 1) { addLog('❌ Нельзя ставить на воде!'); return false; }
+  }
+  
   let all = getVisibleEntities();
-  for (let i = 0; i < all.length; i++) { let e = all[i]; if (e.tx === nx && e.ty === ny && e.hp > 0 && (e.type === 'campfire' || e.type === 'chest' || e.type === 'resource')) { addLog('❌ Место занято!'); return false; } }
+  for (let i = 0; i < all.length; i++) { 
+    let e = all[i]; 
+    if (e.tx === nx && e.ty === ny && e.hp > 0 && (e.type === 'campfire' || e.type === 'chest' || e.type === 'resource')) { 
+      addLog('❌ Место занято!'); return false; 
+    } 
+  }
+  
   let ck = Math.floor(nx/CONFIG.CHUNK_SIZE)+','+Math.floor(ny/CONFIG.CHUNK_SIZE);
   if (!chunks[ck]) ensureChunk(Math.floor(nx/CONFIG.CHUNK_SIZE), Math.floor(ny/CONFIG.CHUNK_SIZE));
-  if (typeKey === 'chest') {
-    chunks[ck].entities.push(createEntity({ type:'chest', tx:nx, ty:ny, name:'📦 Сундук', hp:999, maxHp:999, h:8, color:color, storage: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null] }));
-  } else if (typeKey === 'tent') {
-  chunks[ck].entities.push(createEntity({ type:'tent', tx:nx, ty:ny, name:'⛺ Палатка', hp:999, maxHp:999, h:14, color:'#a08860' }));
+  
+  // Берём данные из ресурсов если есть, иначе создаём вручную
+  let res = ALL_RESOURCES[typeKey];
+  
+  if (res) {
+    // Автоматически из JSON
+    let entity = createEntity({ 
+      type: 'resource', resourceKey: typeKey, 
+      tx: nx, ty: ny, 
+      texKey: res.texKey, name: res.name,
+      hp: res.hp, maxHp: res.hp, h: res.h || 10, color: res.color, drops: res.drops
+    });
+    
+    // Особые свойства для некоторых типов
+    if (typeKey === 'chest') {
+      entity.type = 'chest';
+      entity.storage = [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null];
+    } else if (typeKey === 'campfire') {
+      entity.type = 'campfire';
+      entity.lightRadius = radius || 4;
+      entity.fuel = [];
+      entity.fuelTime = 0;
+      entity.fuelMax = 60000;
+    } else if (typeKey === 'tent') {
+      entity.type = 'tent';
+    }
+    
+    chunks[ck].entities.push(entity);
   } else {
-    chunks[ck].entities.push(createEntity({ 
-  type:'campfire', tx:nx, ty:ny, name:'Костёр', hp:999, maxHp:999, h:6, color:color, lightRadius:radius,
-  fuel: [], fuelTime: 0, fuelMax: 60000
-}));
+    // Fallback для типов без ресурса
+    if (typeKey === 'chest') {
+      chunks[ck].entities.push(createEntity({ type:'chest', tx:nx, ty:ny, name:'📦 Сундук', hp:999, maxHp:999, h:8, color:color, storage: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null] }));
+    } else if (typeKey === 'tent') {
+      chunks[ck].entities.push(createEntity({ type:'tent', tx:nx, ty:ny, name:'⛺ Палатка', hp:999, maxHp:999, h:14, color:'#a08860' }));
+    } else if (typeKey === 'campfire') {
+      chunks[ck].entities.push(createEntity({ 
+        type:'campfire', tx:nx, ty:ny, name:'Костёр', hp:999, maxHp:999, h:6, color:color, lightRadius:radius,
+        fuel: [], fuelTime: 0, fuelMax: 60000
+      }));
+    } else if (typeKey === 'boat') {
+      chunks[ck].entities.push(createEntity({ type:'boat', tx:nx, ty:ny, name:'🛶 Лодка', hp:999, maxHp:999, h:10, color:'#8B4513' }));
+    } else {
+      addLog('❌ Неизвестный тип предмета!');
+      return false;
+    }
   }
+  
   addLog('✅ Установлено!');
   return true;
 }
@@ -1698,7 +1794,7 @@ function drawEntityCode(e){
   let pos=tileToScreen(e.rx,e.ry),h=(e.h||12)*zoom,topY=pos.y-h;
   ctx.save();
 
-  if(e.hp<=0&&e.type!=='campfire'&&e.type!=='chest'&&e.type!=='dropped_item'){
+  if(e.hp<=0&&e.type!=='campfire'&&e.type!=='chest'&&e.type!=='loot_bag'){
     let deathDuration = 1000;
     let elapsed = Date.now() - (e.deathTime || Date.now());
     let progress = Math.min(1, elapsed / deathDuration);
@@ -1735,54 +1831,117 @@ function drawEntityCode(e){
   }
   
   ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();ctx.ellipse(pos.x,pos.y+2*zoom,6*zoom,3*zoom,0,0,Math.PI*2);ctx.fill();
-  if(e.type==='dropped_item'){ctx.fillStyle='#ffcc00';ctx.beginPath();ctx.arc(pos.x,topY+4*zoom,4*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('📦',pos.x,topY-1*zoom);if(e.items&&e.items.length>0){ctx.fillStyle='#fff';ctx.font=(6*zoom)+'px monospace';ctx.fillText(e.items.length+' предм.',pos.x,topY-9*zoom);}}
-  else if(e.type==='cave_entrance'){
-  ctx.fillStyle='#1a1a1a';
-  ctx.beginPath();
-  ctx.ellipse(pos.x, pos.y+4*zoom, 8*zoom, 4*zoom, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle='#000';
-  ctx.beginPath();
-  ctx.ellipse(pos.x, pos.y+3*zoom, 5*zoom, 2.5*zoom, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle='#fff';
-  ctx.font='bold '+(8*zoom)+'px monospace';
-  ctx.textAlign='center';
-  ctx.fillText('🕳️',pos.x,topY-3*zoom);
-}
-else if(e.type==='cave_exit'){
-  ctx.fillStyle='#1a1a1a';
-  ctx.beginPath();
-  ctx.ellipse(pos.x, pos.y+4*zoom, 8*zoom, 4*zoom, 0, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle='#ff0';
-  ctx.font='bold '+(8*zoom)+'px monospace';
-  ctx.textAlign='center';
-  ctx.fillText('🕳️',pos.x,topY-3*zoom);
-}
-  else if(e.type==='chest'){ctx.fillStyle='#8B4513';ctx.fillRect(pos.x-7*zoom,topY,14*zoom,10*zoom);ctx.strokeStyle='#000';ctx.lineWidth=1.5;ctx.strokeRect(pos.x-7*zoom,topY,14*zoom,10*zoom);ctx.fillStyle='#A0522D';ctx.fillRect(pos.x-6*zoom,topY+2*zoom,12*zoom,3*zoom);ctx.fillStyle='#FFD700';ctx.fillRect(pos.x-2*zoom,topY+4*zoom,4*zoom,3*zoom);ctx.fillStyle='#fff';ctx.font='bold '+(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('📦',pos.x,topY-4*zoom);}
-  else if(e.type==='tent'){
-    ctx.fillStyle='#a08860';ctx.fillRect(pos.x-8*zoom,topY,16*zoom,12*zoom);
-    ctx.fillStyle='#8B7355';ctx.beginPath();ctx.moveTo(pos.x-8*zoom,topY);ctx.lineTo(pos.x,topY-8*zoom);ctx.lineTo(pos.x+8*zoom,topY);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#fff';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('⛺',pos.x,topY-5*zoom);
+  
+  if(e.type==='dropped_item'){
+    let hw=TILE_HW*0.5*zoom, hh=TILE_HH*0.5*zoom;
+    // Ромбик
+    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y-hh);
+    ctx.lineTo(pos.x+hw, pos.y);
+    ctx.lineTo(pos.x, pos.y+hh);
+    ctx.lineTo(pos.x-hw, pos.y);
+    ctx.closePath();
+    ctx.fill();
+    // Иконка
+    if(e.item){
+      if(e.item.texKey && getTex(e.item.texKey) && settings.showTextures){
+        ctx.drawImage(getTex(e.item.texKey), pos.x-8*zoom, pos.y-14*zoom, 16*zoom, 16*zoom);
+      } else {
+        ctx.fillStyle='#fff';
+        ctx.font='bold '+(10*zoom)+'px monospace';
+        ctx.textAlign='center';
+        ctx.fillText(e.item.emoji||'📦', pos.x, pos.y-4*zoom);
+      }
+      if(e.item.count > 1){
+        ctx.fillStyle='#fff';
+        ctx.font='bold '+(6*zoom)+'px monospace';
+        ctx.textAlign='center';
+        ctx.fillText('x'+e.item.count, pos.x, pos.y+8*zoom);
+      }
+    }
   }
-  else if(e.type==='campfire'){ctx.fillStyle=e.color||'#ff6600';ctx.beginPath();ctx.arc(pos.x,topY+3*zoom,5*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(pos.x,topY+1*zoom,3*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('🔥',pos.x,topY-3*zoom);}
-  else if(e.type==='monster'){let col=(e.attackCooldown>0&&Math.floor(e.attackCooldown/100)%2===0)?'#fff':(e.color||'#cc3333');ctx.fillStyle=col;ctx.beginPath();ctx.arc(pos.x,topY+h*0.4,6*zoom,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1.2;ctx.stroke();let eyeY=topY+h*0.25;ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(pos.x-2*zoom,eyeY,1.6*zoom,0,Math.PI*2);ctx.arc(pos.x+2*zoom,eyeY,1.6*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(pos.x-2*zoom,eyeY,0.7*zoom,0,Math.PI*2);ctx.arc(pos.x+2*zoom,eyeY,0.7*zoom,0,Math.PI*2);ctx.fill();if(e.burnsInDay&&getTimeOfDay()==='day'){ctx.fillStyle='rgba(255,100,0,0.5)';ctx.beginPath();ctx.arc(pos.x,topY-2*zoom,4*zoom,0,Math.PI*2);ctx.fill();}if(e.neutral){ctx.fillStyle='#ff0';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('⚠️',pos.x,topY-5*zoom);}let barW=12*zoom,barH=2*zoom,barX=pos.x-barW/2,barY=topY-9*zoom;ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);ctx.fillStyle='#ff3333';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);
-  let dx = mouseX - pos.x;
-  let dy = mouseY - (topY + h*0.4);
-  let dist = Math.sqrt(dx*dx + dy*dy);
-  if (dist < 30 * zoom) {
+  else if(e.type==='loot_bag'){
+    // Рандомное смещение в ромбике
+    let seed = e.tx * 1000 + e.ty;
+    let offsetX = (hash(seed, 1) - 0.5) * 12 * zoom;
+    let offsetY = (hash(seed, 2) - 0.5) * 6 * zoom;
+    
+    ctx.fillStyle='#ffcc00';
+    ctx.beginPath();
+    ctx.arc(pos.x + offsetX, topY + 4*zoom + offsetY, 4*zoom, 0, Math.PI*2);
+    ctx.fill();
+    
+    if(e.items && e.items.length > 0){
+      let item = e.items[0];
+      if(item.texKey && getTex(item.texKey)){
+        let img = getTex(item.texKey);
+        ctx.drawImage(img, pos.x + offsetX - 6*zoom, topY - 2*zoom + offsetY, 12*zoom, 12*zoom);
+      } else {
+        ctx.fillStyle='#fff';
+        ctx.font=(10*zoom)+'px monospace';
+        ctx.textAlign='center';
+        ctx.fillText(item.emoji || '📦', pos.x + offsetX, topY - 2*zoom + offsetY);
+      }
+      ctx.fillStyle='#fff';
+      ctx.font=(5*zoom)+'px monospace';
+      ctx.fillText(item.name, pos.x + offsetX, topY - 8*zoom + offsetY);
+    }
+  }
+  else if(e.type==='cave_entrance'){
+    ctx.fillStyle='#1a1a1a';
+    ctx.beginPath();ctx.ellipse(pos.x, pos.y+4*zoom, 8*zoom, 4*zoom, 0, 0, Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath();ctx.ellipse(pos.x, pos.y+3*zoom, 5*zoom, 2.5*zoom, 0, 0, Math.PI*2);ctx.fill();
     ctx.fillStyle='#fff';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';
-    ctx.fillText(e.name,pos.x,topY-11*zoom);
-    ctx.fillStyle='#ff5555';ctx.fillText(e.hp+'/'+e.maxHp,pos.x,topY+1*zoom);
-  }}
-  else if(e.type==='peaceful'){ctx.fillStyle=e.color||'#f5f5dc';ctx.beginPath();ctx.arc(pos.x,topY+h*0.4,5*zoom,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.stroke();let eyeY=topY+h*0.3;ctx.fillStyle='#000';ctx.beginPath();ctx.arc(pos.x-1.5*zoom,eyeY,0.8*zoom,0,Math.PI*2);ctx.arc(pos.x+1.5*zoom,eyeY,0.8*zoom,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,topY-7*zoom);ctx.fillStyle='#8f8';ctx.fillText('❤️'+e.hp,pos.x,topY+2*zoom);}
-  else if(e.type==='resource'){let w=6*zoom;ctx.fillStyle=e.color||'#888';ctx.fillRect(pos.x-w,topY,w*2,h*0.6);ctx.strokeStyle='#000';ctx.lineWidth=0.8;ctx.strokeRect(pos.x-w,topY,w*2,h*0.6);ctx.fillStyle=lighten(e.color||'#888',1.3);ctx.fillRect(pos.x-w-0.8*zoom,topY-2*zoom,w*2+1.6*zoom,3*zoom);ctx.strokeRect(pos.x-w-0.8*zoom,topY-2*zoom,w*2+1.6*zoom,3*zoom);let barW=10*zoom,barH=1.5*zoom,barX=pos.x-barW/2,barY=topY-6*zoom;ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);ctx.fillStyle='#aaa';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);ctx.fillStyle='#fff';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,topY-8*zoom);}
+    ctx.fillText('🕳️',pos.x,topY-3*zoom);
+  }
+  else if(e.type==='cave_exit'){
+    ctx.fillStyle='#1a1a1a';
+    ctx.beginPath();ctx.ellipse(pos.x, pos.y+4*zoom, 8*zoom, 4*zoom, 0, 0, Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ff0';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';
+    ctx.fillText('🕳️',pos.x,topY-3*zoom);
+  }
+  else if(e.type==='monster'){
+    let col=e.color||'#cc3333';
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(pos.x,topY+h*0.4,6*zoom,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#000';ctx.lineWidth=1.2;ctx.stroke();
+    let eyeY=topY+h*0.25;
+    ctx.fillStyle='#ff0';ctx.beginPath();ctx.arc(pos.x-2*zoom,eyeY,1.6*zoom,0,Math.PI*2);ctx.arc(pos.x+2*zoom,eyeY,1.6*zoom,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(pos.x-2*zoom,eyeY,0.7*zoom,0,Math.PI*2);ctx.arc(pos.x+2*zoom,eyeY,0.7*zoom,0,Math.PI*2);ctx.fill();
+    if(e.burnsInDay&&getTimeOfDay()==='day'){ctx.fillStyle='rgba(255,100,0,0.5)';ctx.beginPath();ctx.arc(pos.x,topY-2*zoom,4*zoom,0,Math.PI*2);ctx.fill();}
+    if(e.neutral){ctx.fillStyle='#ff0';ctx.font='bold '+(6*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText('⚠️',pos.x,topY-5*zoom);}
+    let barW=12*zoom,barH=2*zoom,barX=pos.x-barW/2,barY=topY-9*zoom;
+    ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);ctx.fillStyle='#ff3333';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);
+    let dx=mouseX-pos.x,dy=mouseY-(topY+h*0.4),dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<30*zoom){
+      ctx.fillStyle='#fff';ctx.font='bold '+(8*zoom)+'px monospace';ctx.textAlign='center';
+      ctx.fillText(e.name,pos.x,topY-11*zoom);ctx.fillStyle='#ff5555';ctx.fillText(e.hp+'/'+e.maxHp,pos.x,topY+1*zoom);
+    }
+  }
+  else if(e.type==='peaceful'){
+    ctx.fillStyle=e.color||'#f5f5dc';ctx.beginPath();ctx.arc(pos.x,topY+h*0.4,5*zoom,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.stroke();
+    let eyeY=topY+h*0.3;
+    ctx.fillStyle='#000';ctx.beginPath();ctx.arc(pos.x-1.5*zoom,eyeY,0.8*zoom,0,Math.PI*2);ctx.arc(pos.x+1.5*zoom,eyeY,0.8*zoom,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,topY-7*zoom);
+    ctx.fillStyle='#8f8';ctx.fillText('❤️'+e.hp,pos.x,topY+2*zoom);
+  }
+  else if(e.type==='resource'){
+    let w=6*zoom;
+    ctx.fillStyle=e.color||'#888';ctx.fillRect(pos.x-w,topY,w*2,h*0.6);
+    ctx.strokeStyle='#000';ctx.lineWidth=0.8;ctx.strokeRect(pos.x-w,topY,w*2,h*0.6);
+    ctx.fillStyle=lighten(e.color||'#888',1.3);ctx.fillRect(pos.x-w-0.8*zoom,topY-2*zoom,w*2+1.6*zoom,3*zoom);
+    ctx.strokeRect(pos.x-w-0.8*zoom,topY-2*zoom,w*2+1.6*zoom,3*zoom);
+    let barW=10*zoom,barH=1.5*zoom,barX=pos.x-barW/2,barY=topY-6*zoom;
+    ctx.fillStyle='#333';ctx.fillRect(barX,barY,barW,barH);ctx.fillStyle='#aaa';ctx.fillRect(barX,barY,barW*(e.hp/e.maxHp),barH);
+    ctx.fillStyle='#fff';ctx.font=(7*zoom)+'px monospace';ctx.textAlign='center';ctx.fillText(e.name,pos.x,topY-8*zoom);
+  }
   ctx.restore();
 }
 
 function drawEntityTex(e){
-  if(e.type==='campfire'||e.type==='chest'||e.type==='dropped_item'){drawEntityCode(e);return;}
+  if(e.type==='dropped_item'||e.type==='loot_bag'){drawEntityCode(e);return;}
   
   let img=e.texKey?getTex(e.texKey):null;
   if(!img&&(e.type==='monster'||e.type==='peaceful'))img=getTex('monster_default');
@@ -1806,6 +1965,13 @@ function drawEntityTex(e){
     }
     
     let iw=img.width,ih=img.height,scale=(h*1.2)/ih,dw=iw*scale*zoom,dh=ih*scale*zoom;
+    
+    if (e.type === 'resource' && e._flipped) {
+      ctx.translate(pos.x, 0);
+      ctx.scale(-1, 1);
+      ctx.translate(-pos.x, 0);
+    }
+    
     ctx.drawImage(img,pos.x-dw/2,pos.y-dh,dw,dh);
     ctx.restore();
     return;
@@ -1813,7 +1979,6 @@ function drawEntityTex(e){
   
   let iw=img.width,ih=img.height,scale=(h*1.2)/ih,dw=iw*scale*zoom,dh=ih*scale*zoom,topY=pos.y-h;
   
-  // Анимация атаки — рывок вперёд
   if (e._attackAnim && Date.now() - e._attackAnim < 150) {
     let progress = 1 - (Date.now() - e._attackAnim) / 150;
     let offset = progress * 5 * zoom;
@@ -1826,7 +1991,6 @@ function drawEntityTex(e){
     }
   }
   
-  // Анимация получения урона — белая вспышка
   if (e._hurtAnim && Date.now() - e._hurtAnim < 200) {
     let progress = 1 - (Date.now() - e._hurtAnim) / 200;
     ctx.fillStyle = 'rgba(255,255,255,' + (progress * 0.5) + ')';
@@ -1834,8 +1998,6 @@ function drawEntityTex(e){
     ctx.arc(pos.x, pos.y - h*0.3, dw*0.45, 0, Math.PI*2);
     ctx.fill();
   }
-  
-  if((e.type==='monster'||e.type==='peaceful')&&e.attackCooldown>0&&Math.floor(e.attackCooldown/100)%2===0)ctx.globalAlpha=0.5;
   
   ctx.fillStyle='rgba(0,0,0,0.3)';ctx.beginPath();
   ctx.ellipse(pos.x,pos.y+2*zoom,dw*0.35,dh*0.12,0,0,Math.PI*2);ctx.fill();
@@ -2023,6 +2185,67 @@ function drawPlayerTex(){
     ctx.restore();
 }
 
+function drawHitbox(entity) {
+  let pos = tileToScreen(entity.rx, entity.ry);
+  let h = entity.h;
+  
+  let dw, dh;
+  
+  if (settings.showTextures && entity.texKey) {
+    let img = getTex(entity.texKey);
+    if (img && img.width && img.height) {
+      // ТОЧНО как в drawEntityTex: scale без zoom, dw/dh с zoom
+      let scale = (h * 1.2 * zoom) / img.height;
+      dw = img.width * scale * zoom * 0.9;
+      dh = img.height * scale * zoom * 0.9;
+    } else {
+      if (entity.type === 'monster') { dw = 12 * zoom; dh = 12 * zoom; }
+      else if (entity.type === 'peaceful') { dw = 10 * zoom; dh = 10 * zoom; }
+      else if (entity.type === 'resource') { dw = 12 * zoom; dh = h * zoom * 0.6; }
+      else { dw = 16 * zoom; dh = 12 * zoom; }
+    }
+  } else {
+    if (entity.type === 'monster') { dw = 12 * zoom; dh = 12 * zoom; }
+    else if (entity.type === 'peaceful') { dw = 10 * zoom; dh = 10 * zoom; }
+    else if (entity.type === 'resource') { dw = 12 * zoom; dh = h * zoom * 0.6; }
+    else if (entity.type === 'campfire' || entity.type === 'chest' || entity.type === 'tent') { dw = 16 * zoom; dh = 14 * zoom; }
+    else if (entity.type === 'cave_entrance' || entity.type === 'cave_exit') { dw = 16 * zoom; dh = 12 * zoom; }
+    else if (entity.type === 'loot_bag') { dw = 8 * zoom; dh = 8 * zoom; }
+    else { dw = 12 * zoom; dh = 12 * zoom; }
+  }
+  
+  let left = pos.x - dw / 2;
+  let top = pos.y - dh * 1.05;
+  
+  ctx.save();
+  
+  let fillColor = entity.color || '#ffffff';
+  if (fillColor.startsWith('#')) {
+    let r = parseInt(fillColor.slice(1, 3), 16);
+    let g = parseInt(fillColor.slice(3, 5), 16);
+    let b = parseInt(fillColor.slice(5, 7), 16);
+    ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',0.25)';
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  }
+  ctx.fillRect(left, top, dw, dh);
+  
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(left, top, dw, dh);
+  
+  let cornerLen = Math.min(dw, dh) * 0.25;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+  ctx.lineWidth = 2;
+  
+  ctx.beginPath(); ctx.moveTo(left, top + cornerLen); ctx.lineTo(left, top); ctx.lineTo(left + cornerLen, top); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(left + dw - cornerLen, top); ctx.lineTo(left + dw, top); ctx.lineTo(left + dw, top + cornerLen); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(left, top + dh - cornerLen); ctx.lineTo(left, top + dh); ctx.lineTo(left + cornerLen, top + dh); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(left + dw - cornerLen, top + dh); ctx.lineTo(left + dw, top + dh); ctx.lineTo(left + dw, top + dh - cornerLen); ctx.stroke();
+  
+  ctx.restore();
+}
+
 function render(){
   let W=canvas.width,H=canvas.height;
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#111122';ctx.fillRect(0,0,W,H);
@@ -2073,7 +2296,29 @@ function render(){
     ctx.restore();
   }
   
+  // ═══ ОТРИСОВКА ХИТБОКСОВ (под сущностями) ═══
+  if (settings.showHitboxes) {
+    for (let i = 0; i < allObjs.length; i++) {
+      let o = allObjs[i];
+      if (o.type !== 'player' && o.hp > 0 && 
+          (o.type === 'monster' || o.type === 'peaceful' || o.type === 'resource' ||
+           o.type === 'campfire' || o.type === 'chest' || o.type === 'tent' ||
+           o.type === 'cave_entrance' || o.type === 'cave_exit' || o.type === 'loot_bag')) {
+        drawHitbox(o);
+      }
+    }
+  }
+  
   for(let i=0;i<allObjs.length;i++){let o=allObjs[i];if(o.type==='player')drawPlayerTex();else drawEntityTex(o);}
+  
+  // ═══ ХИТБОКС ИГРОКА (поверх игрока) ═══
+  if (settings.showHitboxes) {
+    drawHitbox({ 
+      rx: player.rx, ry: player.ry, 
+      h: 16, texKey: 'player', 
+      color: '#5599dd', type: 'player' 
+    });
+  }
   
   // Ночь с вырезанием света от костров
   let alpha = inCave ? 0.85 : getNightAlpha();
@@ -2225,6 +2470,66 @@ window.addEventListener('keyup',function(e){keys[e.key.toLowerCase()]=false;keys
 canvas.addEventListener('wheel',function(e){if(paused||openChest)return;if(e.shiftKey||e.ctrlKey){e.preventDefault();
   zoom=Math.max(1.0,Math.min(3.0,zoom-e.deltaY*0.001));
 }else{e.preventDefault();if(e.deltaY>0)selectedSlot=(selectedSlot+1)%8;else selectedSlot=(selectedSlot-1+8)%8;updateInventoryUI();}});
+
+// Поиск пути (простой BFS)
+function findPath(startTX, startTY, endTX, endTY, maxSteps) {
+  maxSteps = maxSteps || 100;
+  
+  let visited = {};
+  let queue = [{ tx: startTX, ty: startTY, path: [] }];
+  visited[startTX + ',' + startTY] = true;
+  
+  let dirs = [
+    { dx: 0, dy: -1 },
+    { dx: 1, dy: 0 },
+    { dx: 0, dy: 1 },
+    { dx: -1, dy: 0 },
+  ];
+  
+  if (Math.random() < 0.5) dirs.reverse();
+  
+  while (queue.length > 0) {
+    let current = queue.shift();
+    if (current.path.length >= maxSteps) continue;
+    if (current.tx === endTX && current.ty === endTY) return current.path;
+    
+    for (let d = 0; d < dirs.length; d++) {
+      let nx = current.tx + dirs[d].dx;
+      let ny = current.ty + dirs[d].dy;
+      let key = nx + ',' + ny;
+      if (visited[key]) continue;
+      
+      let tile = getTile(nx, ny);
+      if (tile.base === 1) continue;
+      if (inCave && tile.base === -1) continue;
+      
+      if (nx !== endTX || ny !== endTY) {
+        let blocked = false;
+        let allEnts = getVisibleEntities();
+        for (let i = 0; i < allEnts.length; i++) {
+          let e = allEnts[i];
+          if (e.tx === nx && e.ty === ny && e.hp > 0 && 
+              e.type !== 'campfire' && e.type !== 'chest' && 
+              e.type !== 'loot_bag' && e.type !== 'resource' &&
+              e.type !== 'tent' && e.type !== 'cave_entrance' && e.type !== 'cave_exit') {
+            blocked = true;
+            break;
+          }
+        }
+        if (nx === player.tx && ny === player.ty) blocked = true;
+        if (blocked) continue;
+      }
+      
+      visited[key] = true;
+      queue.push({ tx: nx, ty: ny, path: current.path.concat([{ tx: nx, ty: ny }]) });
+    }
+  }
+  return null;
+}
+
+let playerPath = [];
+let pathTarget = null;
+
 canvas.addEventListener('click', function(e) {
   if (paused || player.hp <= 0) return;
   if (openChest || openCampfire) return;
@@ -2234,18 +2539,15 @@ canvas.addEventListener('click', function(e) {
   let my = e.clientY - rect.top;
   let entities = getVisibleEntities();
   
-  // Если клик мимо UI
   if (e.target !== canvas) return;
   
-  // Если держим предмет — кладём в сундук
+  // Если держим предмет
   if (player.heldItem) {
-    let bestChest = null, bestDist = 35;
+    let bestChest = null;
     for (let i = 0; i < entities.length; i++) {
       let ent = entities[i];
-      if (ent.type === 'chest') {
-        let pos = tileToScreen(ent.rx, ent.ry);
-        let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < bestDist) { bestDist = dist; bestChest = ent; }
+      if (ent.type === 'chest' && isClickOnEntity(mx, my, ent)) {
+        bestChest = ent; break;
       }
     }
     if (bestChest) { openChestUI(bestChest); return; }
@@ -2255,13 +2557,44 @@ canvas.addEventListener('click', function(e) {
     return;
   }
   
-  // Клик по входу/выходу из пещеры
+  // ═══ 1. СНАЧАЛА АТАКА (враги + ресурсы) ═══
+  let targets = [];
+  for (let i = 0; i < entities.length; i++) {
+    let ent = entities[i];
+    if ((ent.type === 'monster' || ent.type === 'peaceful' || ent.type === 'resource') && ent.hp > 0) {
+      targets.push(ent);
+    }
+  }
+  
+  let bestTarget = null;
+  for (let i = 0; i < targets.length; i++) {
+    if (isClickOnEntity(mx, my, targets[i])) {
+      bestTarget = targets[i];
+      break;
+    }
+  }
+  
+  if (bestTarget) {
+    let distToTarget = Math.sqrt((bestTarget.tx - player.tx) ** 2 + (bestTarget.ty - player.ty) ** 2);
+    
+    if (distToTarget <= player.attackRange) {
+      attackEntity(bestTarget);
+    } else {
+      let path = findPath(player.tx, player.ty, bestTarget.tx, bestTarget.ty, 80);
+      if (path && path.length > 0) {
+        playerPath = path;
+        pathTarget = { tx: bestTarget.tx, ty: bestTarget.ty };
+        player._attackOnArrival = null;
+      }
+    }
+    return;
+  }
+  
+  // ═══ 2. ВХОД/ВЫХОД ПЕЩЕРЫ ═══
   for (let i = 0; i < entities.length; i++) {
     let ent = entities[i];
     if (ent.type === 'cave_entrance' || ent.type === 'cave_exit') {
-      let pos = tileToScreen(ent.rx, ent.ry);
-      let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 25 && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
+      if (isClickOnEntity(mx, my, ent) && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
         if (ent.type === 'cave_entrance') {
           enterCave(ent);
           addLog('🕳️ Вы вошли в пещеру!');
@@ -2274,89 +2607,66 @@ canvas.addEventListener('click', function(e) {
     }
   }
   
-  // Клик по костру
+  // ═══ 3. КОСТЁР ═══
   for (let i = 0; i < entities.length; i++) {
     let ent = entities[i];
     if (ent.type === 'campfire') {
-      let pos = tileToScreen(ent.rx, ent.ry);
-      let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 25 && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
+      if (isClickOnEntity(mx, my, ent) && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
         openCampfireUI(ent);
         return;
       }
     }
   }
   
-  // Клик по сундуку
+  // ═══ 4. СУНДУК ═══
   for (let i = 0; i < entities.length; i++) {
     let ent = entities[i];
     if (ent.type === 'chest') {
-      let pos = tileToScreen(ent.rx, ent.ry);
-      let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 30 && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
+      if (isClickOnEntity(mx, my, ent) && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
         openChestUI(ent);
         return;
       }
     }
   }
   
-  // Клик по dropped_item — подобрать
+  // ═══ 5. ПОДОБРАТЬ ПРЕДМЕТ С ЗЕМЛИ (один предмет) ═══
   for (let i = 0; i < entities.length; i++) {
     let ent = entities[i];
-    if (ent.type === 'dropped_item' && ent.items && ent.items.length > 0) {
+    if (ent.type === 'dropped_item' && ent.item && ent.hp > 0) {
+      // Проверяем клик без isClickOnEntity (у dropped_item своя отрисовка)
       let pos = tileToScreen(ent.rx, ent.ry);
-      let dx = mx - pos.x, dy = my - pos.y, dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 25 && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
-        pickupDroppedItem(ent);
-        addLog('📦 Предметы подобраны!');
+      let dx = mx - pos.x;
+      let dy = my - (pos.y - 8 * zoom);
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < 12 * zoom && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
+        let item = ent.item;
+        let added = addToInventory({ name: item.name, emoji: item.emoji, texKey: item.texKey, count: item.count || 1 });
+        if (added) {
+          ent.hp = -1;
+          ent.deathTime = Date.now();
+          cachedObjects = null;
+          addLog('📦 Подобрано: ' + item.name);
+        } else {
+          addLog('🎒 Инвентарь полон!');
+        }
         return;
       }
     }
   }
   
-  // ═══ ИЩЕМ ЦЕЛЬ ДЛЯ АТАКИ (враги + ресурсы) ═══
-  let targets = [];
+  // ═══ 6. ПОДОБРАТЬ МЕШОК (лут) ═══
   for (let i = 0; i < entities.length; i++) {
     let ent = entities[i];
-    if ((ent.type === 'monster' || ent.type === 'peaceful' || ent.type === 'resource') && ent.hp > 0) {
-      targets.push(ent);
-    }
-  }
-  
-  // Ищем ближайшую цель под курсором
-  let bestTarget = null, bestTargetDist = 40;
-  for (let i = 0; i < targets.length; i++) {
-    let t = targets[i];
-    let pos = tileToScreen(t.rx, t.ry);
-    let dx = mx - pos.x;
-    let dy = my - (pos.y - (t.h || 16) * zoom * 0.6);
-    let dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < bestTargetDist) {
-      bestTargetDist = dist;
-      bestTarget = t;
-    }
-  }
-  
-  // Если нашли цель под курсором
-  if (bestTarget) {
-    let distToTarget = Math.sqrt((bestTarget.tx - player.tx) ** 2 + (bestTarget.ty - player.ty) ** 2);
-    
-    if (distToTarget <= player.attackRange) {
-      // Цель рядом — атакуем сразу
-      attackEntity(bestTarget);
-    } else {
-      // Цель далеко — идём ТОЧНО на её клетку
-      let path = findPath(player.tx, player.ty, bestTarget.tx, bestTarget.ty, 80);
-      if (path && path.length > 0) {
-        playerPath = path;
-        pathTarget = { tx: bestTarget.tx, ty: bestTarget.ty };
-        player._attackOnArrival = null;
+    if (ent.type === 'loot_bag' && ent.items && ent.items.length > 0) {
+      if (isClickOnEntity(mx, my, ent) && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
+        pickupDroppedItem(ent);
+        return;
       }
     }
-    return;
   }
   
-  // ═══ НЕТ ЦЕЛИ — ИДЁМ ПО ЗЕМЛЕ ═══
+  // ═══ 7. ХОДЬБА ПО ЗЕМЛЕ ═══
   let bestTX = player.tx, bestTY = player.ty;
   let bestDist = Infinity;
   
@@ -2376,7 +2686,7 @@ canvas.addEventListener('click', function(e) {
             let e = entities[i];
             if (e.tx === checkTX && e.ty === checkTY && e.hp > 0 &&
                 e.type !== 'campfire' && e.type !== 'chest' && 
-                e.type !== 'dropped_item' && e.type !== 'resource' &&
+                e.type !== 'loot_bag' && e.type !== 'dropped_item' && e.type !== 'resource' &&
                 e.type !== 'tent' && e.type !== 'cave_entrance' && e.type !== 'cave_exit') {
               blocked = true;
               break;
@@ -2394,7 +2704,6 @@ canvas.addEventListener('click', function(e) {
     }
   }
   
-  // Строим путь
   if (bestTX !== player.tx || bestTY !== player.ty) {
     let path = findPath(player.tx, player.ty, bestTX, bestTY, 80);
     if (path && path.length > 0) {
@@ -2602,6 +2911,28 @@ document.getElementById('console-input').addEventListener('keydown', function(e)
   }
 });
 
+// function pickupLootBag(bag) {
+//   if (!bag.items || bag.items.length === 0) return;
+//   let allPickedUp = true;
+//   let remaining = [];
+//   for (let i = 0; i < bag.items.length; i++) {
+//     let item = bag.items[i];
+//     let added = addToInventory({ name: item.name, emoji: item.emoji, texKey: item.texKey, count: item.count });
+//     if (!added) {
+//       allPickedUp = false;
+//       remaining.push(item);
+//     }
+//   }
+//   if (allPickedUp) {
+//     bag.items = [];
+//     bag.hp = 0;
+//     addLog('📦 Мешок собран!');
+//   } else {
+//     bag.items = remaining;
+//     addLog('🎒 Инвентарь полон!');
+//   }
+// }
+
 function executeCommand(cmd) {
   commandHistory.push(cmd);
   if (commandHistory.length > 50) commandHistory.shift();
@@ -2706,77 +3037,7 @@ function addConsoleLine(text){
   output.scrollTop = output.scrollHeight;
 }
 
-// Поиск пути (простой BFS)
-function findPath(startTX, startTY, endTX, endTY, maxSteps) {
-  maxSteps = maxSteps || 100;
-  
-  let visited = {};
-  let queue = [{ tx: startTX, ty: startTY, path: [] }];
-  visited[startTX + ',' + startTY] = true;
-  
-  let dirs = [
-    { dx: 0, dy: -1 }, // вверх
-    { dx: 1, dy: 0 },  // право
-    { dx: 0, dy: 1 },  // низ
-    { dx: -1, dy: 0 }, // лево
-  ];
-  
-  // Перемешиваем направления для более естественного движения
-  if (Math.random() < 0.5) dirs.reverse();
-  
-  while (queue.length > 0) {
-    let current = queue.shift();
-    
-    if (current.path.length >= maxSteps) continue;
-    
-    // Если пришли — возвращаем путь
-    if (current.tx === endTX && current.ty === endTY) {
-      return current.path;
-    }
-    
-    for (let d = 0; d < dirs.length; d++) {
-      let nx = current.tx + dirs[d].dx;
-      let ny = current.ty + dirs[d].dy;
-      let key = nx + ',' + ny;
-      
-      if (visited[key]) continue;
-      
-      let tile = getTile(nx, ny);
-      // Не проходим воду и стены пещер
-      if (tile.base === 1) continue;
-      if (inCave && tile.base === -1) continue;
-      
-      // Проверяем что на клетке нет сущности-препятствия
-      let blocked = false;
-      let allEnts = getVisibleEntities();
-      for (let i = 0; i < allEnts.length; i++) {
-        let e = allEnts[i];
-        if (e.tx === nx && e.ty === ny && e.hp > 0 && 
-            e.type !== 'campfire' && e.type !== 'chest' && 
-            e.type !== 'dropped_item' && e.type !== 'resource' &&
-            e.type !== 'tent' && e.type !== 'cave_entrance' && e.type !== 'cave_exit') {
-          blocked = true;
-          break;
-        }
-      }
-      if (nx === player.tx && ny === player.ty) blocked = true;
-      if (blocked) continue;
-      
-      visited[key] = true;
-      queue.push({
-        tx: nx,
-        ty: ny,
-        path: current.path.concat([{ tx: nx, ty: ny }])
-      });
-    }
-  }
-  
-  return null; // путь не найден
-}
-
 // Маршрут игрока
-let playerPath = [];
-let pathTarget = null; // для визуального индикатора
 
 function handleInput(now){
   if(paused||player.hp<=0||openChest)return;
@@ -2856,7 +3117,15 @@ document.getElementById('btn-continue').addEventListener('click',togglePause);
 document.getElementById('btn-new-world').addEventListener('click',function(){SEED=Math.floor(Math.random()*1000000);chunks={};
 player.tx=0;
 player.ty=0;
-let safety=0;while(getTile(player.tx,player.ty).base===1&&safety<100){player.tx=Math.floor(Math.random()*20)-10;player.ty=Math.floor(Math.random()*20)-10;safety++;}player.rx=player.tx;player.ry=player.ty;
+let safety=0;
+while(getTile(player.tx,player.ty).base===1&&safety<100){
+  let size = safety + 2;
+  player.tx = Math.floor(Math.random() * size) - Math.floor(size / 2);
+  player.ty = Math.floor(Math.random() * size) - Math.floor(size / 2);
+  safety++;
+}
+player.rx=player.tx;
+player.ry=player.ty;
 player.hp = CONFIG.PLAYER.startHp;
 player.maxHp = CONFIG.PLAYER.startMaxHp;
 player.damage = CONFIG.PLAYER.startDamage;
@@ -3088,12 +3357,16 @@ function openSettings() {
       '<option value="manual" '+(settings.qualityMode==='manual'?'selected':'')+'>🔧 Ручная настройка</option>' +
     '</select></div>';
   
+  // ═══ ОБЩИЕ НАСТРОЙКИ (для всех режимов) ═══
+  html += '<div style="margin-bottom:15px;"><b>🖼️ Текстуры:</b><br>' +
+    '<button id="set-textures" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showTextures?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showTextures?'✅ Вкл':'❌ Выкл')+'</button></div>';
+  
+  html += '<div style="margin-bottom:15px;"><b>🎯 Хитбоксы:</b><br>' +
+    '<button id="set-hitboxes" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showHitboxes?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showHitboxes?'✅ Вкл':'❌ Выкл')+'</button></div>';
+  
   // Режим АВТО
   if (settings.qualityMode === 'auto') {
     html += '<div style="color:#aaa;font-size:12px;text-align:center;padding:10px;">🤖 Производительность настраивается автоматически</div>';
-    
-    html += '<div style="margin-bottom:15px;"><b>🖼️ Текстуры:</b><br>' +
-      '<button id="set-textures" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showTextures?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showTextures?'✅ Вкл':'❌ Выкл')+'</button></div>';
   }
   
   // Режим ПРЕСЕТЫ
@@ -3103,9 +3376,6 @@ function openSettings() {
       '<button id="set-medium" style="padding:8px 15px;font-family:monospace;cursor:pointer;background:'+(settings.qualityPreset==='medium'?'#aa4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;margin:2px;">🟡 Среднее</button>' +
       '<button id="set-high" style="padding:8px 15px;font-family:monospace;cursor:pointer;background:'+(settings.qualityPreset==='high'?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;margin:2px;">🟢 Высокое</button>' +
       '</div>';
-    
-    html += '<div style="margin-bottom:15px;"><b>🖼️ Текстуры:</b><br>' +
-      '<button id="set-textures" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showTextures?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showTextures?'✅ Вкл':'❌ Выкл')+'</button></div>';
   }
   
   // Режим РУЧНОЙ
@@ -3131,46 +3401,38 @@ function openSettings() {
     html += '<div style="margin-bottom:15px;"><b>Плавные переходы биомов:</b><br>' +
       '<button id="set-smooth" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.smoothBiomes?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.smoothBiomes?'✅ Вкл':'❌ Выкл')+'</button></div>';
     
-    // Размытие биомов — ползунок
     let blendDisabled = settings.smoothBiomes ? '' : 'disabled';
     html += '<div style="margin-bottom:15px;"><b>Размытие границ биомов:</b> ' + settings.blendStrength + ' клеток<br>' +
       '<input type="range" min="1" max="4" step="1" value="' + settings.blendStrength + '" id="set-blend" style="width:100%;" ' + blendDisabled + '>' +
       '<div style="font-size:10px;color:#aaa;">' + (settings.smoothBiomes ? settings.blendStrength + ' (больше = плавнее)' : 'Включите плавные переходы') + '</div></div>';
-    
-    html += '<div style="margin-bottom:15px;"><b>Текстуры:</b><br>' +
-      '<button id="set-textures" style="padding:5px 15px;font-family:monospace;cursor:pointer;background:'+(settings.showTextures?'#4a4':'#444')+';color:#fff;border:1px solid #888;border-radius:4px;">'+(settings.showTextures?'✅ Вкл':'❌ Выкл')+'</button></div>';
   }
   
   list.innerHTML = html;
   panel.style.display = 'flex';
   paused = true;
   
-  // Обработчик выпадающего списка режима
+  // ═══ ОБРАБОТЧИКИ ═══
+  
+  // Режим
   document.getElementById('set-mode').onchange = function() {
     settings.qualityMode = this.value;
     openSettings();
   };
   
-  // Обработчик blend (только в manual)
-  let blendSlider = document.getElementById('set-blend');
-  if (blendSlider) {
-    blendSlider.oninput = function() {
-      settings.blendStrength = parseInt(this.value);
-      chunks = {};
-      cachedObjects = null;
-    };
-  }
+  // Текстуры (общий для всех)
+  document.getElementById('set-textures').onclick = function() {
+    settings.showTextures = !settings.showTextures;
+    if (!settings.showTextures) settings.smoothBiomes = false;
+    openSettings();
+  };
   
-  // Обработчики для авто
-  if (settings.qualityMode === 'auto') {
-    document.getElementById('set-textures').onclick = function() {
-      settings.showTextures = !settings.showTextures;
-      if (!settings.showTextures) settings.smoothBiomes = false;
-      openSettings();
-    };
-  }
-
-  // Обработчики для ручного режима
+  // Хитбоксы (общий для всех)
+  document.getElementById('set-hitboxes').onclick = function() {
+    settings.showHitboxes = !settings.showHitboxes;
+    openSettings();
+  };
+  
+  // Ручной режим
   if (settings.qualityMode === 'manual') {
     document.getElementById('set-render').oninput = function() {
       settings.renderDistance = parseInt(this.value);
@@ -3197,14 +3459,17 @@ function openSettings() {
       settings.smoothBiomes = !settings.smoothBiomes;
       openSettings();
     };
-    document.getElementById('set-textures').onclick = function() {
-      settings.showTextures = !settings.showTextures;
-      if (!settings.showTextures) settings.smoothBiomes = false;
-      openSettings();
-    };
+    let blendSlider = document.getElementById('set-blend');
+    if (blendSlider) {
+      blendSlider.oninput = function() {
+        settings.blendStrength = parseInt(this.value);
+        chunks = {};
+        cachedObjects = null;
+      };
+    }
   }
   
-  // Обработчики для пресетов
+  // Пресеты
   if (settings.qualityMode === 'presets') {
     document.getElementById('set-low').onclick = function() {
       settings.qualityPreset = 'low';
@@ -3241,12 +3506,6 @@ function openSettings() {
       cachedObjects = null;
       openSettings();
     };
-
-    document.getElementById('set-textures').onclick = function() {
-      settings.showTextures = !settings.showTextures;
-      if (!settings.showTextures) settings.smoothBiomes = false;
-      openSettings();
-    };
   }
   
   document.getElementById('btn-settings-close').onclick = function() {
@@ -3262,14 +3521,14 @@ document.getElementById('btn-settings').addEventListener('click', function() {
 });
 
 async function startGame() {
-  await loadJSON();
+  await loadAssets();
   
   TILE_HW = CONFIG.TILE_W / 2;
   TILE_HH = CONFIG.TILE_H / 2;
   FULL_CYCLE = CONFIG.DAY_NIGHT.dayDuration + CONFIG.DAY_NIGHT.nightDuration;
   cycleTime = CONFIG.DAY_NIGHT.dayDuration * 0.1;
   
-  // Создаём игрока после загрузки CONFIG
+  // Создаём игрока
   player = {
     rx: 0, ry: 0, tx: 0, ty: 0,
     hp: CONFIG.PLAYER.startHp,
@@ -3287,12 +3546,13 @@ async function startGame() {
     heldItem: null
   };
   
-  // Переносим спавн после создания player
+  // Спавн
   player.tx = 0; player.ty = 0;
   let safety = 0;
-  while (getTile(player.tx, player.ty).base === 1 && safety < CONFIG.MISC.startSpawnMaxAttempts) {
-    player.tx = Math.floor(Math.random() * 20) - 10;
-    player.ty = Math.floor(Math.random() * 20) - 10;
+  while (getTile(player.tx, player.ty).base === 1 && safety < 100) {
+    let size = safety + 2;
+    player.tx = Math.floor(Math.random() * size) - Math.floor(size / 2);
+    player.ty = Math.floor(Math.random() * size) - Math.floor(size / 2);
     safety++;
   }
   player.rx = player.tx; player.ry = player.ty;
@@ -3301,11 +3561,9 @@ async function startGame() {
   camX = canvas.width / 2 - startPos.x;
   camY = canvas.height / 2 - startPos.y;
   
-  loadTextures().then(function(){
-    requestAnimationFrame(gameLoop);
-    addLog('🎮 Готово!');
-    updateInventoryUI();
-  });
+  requestAnimationFrame(gameLoop);
+  addLog('🎮 Готово!');
+  updateInventoryUI();
 }
 
 startGame();

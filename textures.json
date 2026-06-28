@@ -65,5 +65,6 @@
   "item_wheat": "img/item_wheat.png",
   "item_seeds": "img/item_seeds.png",
   "item_fiber": "img/item_fiber.png",
-  "cave_entrance": "img/monster_demon.png"
+  "cave_entrance": "img/monster_demon.png",
+  "item_boat": "img/item_boat.png"
 }

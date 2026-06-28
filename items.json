@@ -236,5 +236,13 @@
   "placeable": true, 
   "placeKey": "tent", 
   "placeColor": "#a08860"
+},
+"boat": {
+  "name": "🛶 Лодка",
+  "emoji": "🛶",
+  "texKey": "item_boat",
+  "placeable": true,
+  "placeKey": "boat",
+  "placeColor": "#8B4513"
 }
 }

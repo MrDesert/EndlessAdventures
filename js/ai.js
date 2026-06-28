@@ -12,14 +12,14 @@ function canMoveTo(tx, ty, self, allEntities) {
     if (e === self) continue;
     if (e.tx === tx && e.ty === ty && e.hp > 0 && 
         e.type !== 'campfire' && e.type !== 'chest' && 
-        e.type !== 'dropped_item' && e.type !== 'resource') return false;
+        e.type !== 'loot_bag' && e.type !== 'resource') return false;
   }
   if (player.tx === tx && player.ty === ty) return false;
   return true;
 }
 
 function updateAI(e, dt, allEntities, isPeaceful) {
-  if (e.hp <= 0 || e.type === 'campfire' || e.type === 'chest' || e.type === 'dropped_item') return;
+  if (e.hp <= 0 || e.type === 'campfire' || e.type === 'chest' || e.type === 'loot_bag') return;
   let ai = e.ai; if (!ai) return;
   let distToPlayer = Math.sqrt((e.tx - player.tx) ** 2 + (e.ty - player.ty) ** 2);
   
