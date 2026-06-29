@@ -35,7 +35,7 @@
   "item_resin": "img/item_resin.png",
   "item_rock": "img/item_rock.png",
   "item_flint": "img/item_flint.png",
-  "item_iron_ore": "img/item_iron_ore.png",
+  "item_iron_ore": "img/ore.png",
   "item_gold_nugget": "img/item_gold_nugget.png",
   "item_cactus": "img/item_cactus.png",
   "item_water": "img/item_water.png",
@@ -65,6 +65,7 @@
   "item_wheat": "img/item_wheat.png",
   "item_seeds": "img/item_seeds.png",
   "item_fiber": "img/item_fiber.png",
-  "cave_entrance": "img/monster_demon.png",
-  "item_boat": "img/item_boat.png"
+  "cave_entrance": "img/cave_entrance.png",
+  "item_boat": "img/item_boat.png",
+  "wheat": "img/wheat.png"
 }

@@ -157,7 +157,7 @@
     "name": "Волк", 
     "category": "animal",
     "texKey": "monster_wolf", 
-    "h":10,
+    "h":9,
     "aggroChance": 0.3, 
     "hp": 22, 
     "damage": 9, 
@@ -315,7 +315,8 @@
 },
 "deer": {
     "name": "Олень", 
-    "texKey": "animal_deer", 
+    "texKey": "animal_deer",
+    "h":14, 
     "type": "peaceful",
     "hp": 12, 
     "color": "#c4a46c",

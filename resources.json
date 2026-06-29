@@ -29,11 +29,7 @@
     ]
   },
   "cactus": {
-    "name": "Кактус", 
-    "texKey": "cactus", 
-    "hp": 15, 
-    "color": "#5a8a3a", 
-    "h": 9,
+    "name": "Кактус", "texKey": "cactus", "hp": 15, "color": "#5a8a3a", "h": 9,
     "drops": [
       {"itemKey": "cactus", "chance": 1.0, "count": 1},
       {"itemKey": "water", "chance": 0.5, "count": 1}
@@ -63,13 +59,13 @@
   },
   "wheat": {
     "name": "🌾 Пшеница", 
-    "texKey": null, 
+    "texKey": "wheat", 
     "hp": 5, 
     "color": "#d4c47c", 
     "h": 8,
     "drops": [
       {"itemKey": "wheat", "chance": 1.0, "count": 1},
-      {"itemKey": "seeds", "chance": 0.5, "count": 1}
+      {"itemKey": "item_seeds", "chance": 0.5, "count": 1}
     ]
   },
   "cave_entrance": {
@@ -77,47 +73,19 @@
     "texKey": "cave_entrance",
     "hp": 999,
     "color": "#1a1a1a",
-    "h": 6,
+    "h": 10,
     "drops": []
   },
-  "boat": {
-  "name": "🛶 Лодка",
-  "texKey": "item_boat",
-  "hp": 999,
-  "color": "#8B4513",
-  "h": 5,
-  "drops": []
-},
-"chest": {
-  "name": "📦 Сундук",
-  "texKey": "chest",
-  "hp": 999,
-  "color": "#8B4513",
-  "h": 8,
-  "drops": []
-},
-"campfire": {
-  "name": "🔥 Костёр",
-  "texKey": "campfire",
-  "hp": 999,
-  "color": "#ff6600",
-  "h": 6,
-  "drops": []
-},
-"tent": {
-  "name": "⛺ Палатка",
-  "texKey": "tent",
-  "hp": 999,
-  "color": "#a08860",
-  "h": 14,
-  "drops": []
-},
-"loot_bag": {
-  "name": "📦 Мешок",
-  "texKey": "loot_bag",
-  "hp": 999,
-  "color": "#ffcc00",
-  "h": 4,
-  "drops": []
-}
+    "loot_bag": {
+        "name": "Мешок",
+        "texKey": "loot_bag",
+        "hp": 1,
+        "color": "#ffcc00",
+        "h": 10,
+        "drops": [
+            {"itemKey": "wood", "chance": 0.5, "count": 1},
+            {"itemKey": "stick", "chance": 0.9, "count": 2},
+            {"itemKey": "torch", "chance": 0.6, "count": 1}
+        ]
+    }
 }

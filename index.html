@@ -55,21 +55,132 @@
   </div>
 </div>
 <div id="craft-panel"><div id="craft-panel-inner"><h2>🔧 КРАФТ</h2><div id="craft-list"></div><p>C или ESC — закрыть</p></div></div>
+
+<!-- Панель настроек -->
 <div id="settings-panel" style="position:fixed;top:0;left:0;width:100%;height:100%;display:none;justify-content:center;align-items:center;z-index:110;pointer-events:auto;background:rgba(0,0,0,0.7);">
   <div style="background:#1a1a2e;border:2px solid #888;border-radius:16px;padding:25px 30px;text-align:center;color:#fff;box-shadow:0 0 40px rgba(0,0,0,0.8);min-width:350px;">
     <h2 style="color:#ffcc00;margin:0 0 20px 0;">⚙️ Настройки</h2>
-    <div id="settings-list" style="text-align:left;line-height:2;"></div>
+    <div id="settings-list" style="text-align:left;line-height:2;">
+
+      <!-- Выпадающий список режима -->
+      <div style="margin-bottom:15px;">
+        <b>⚡ Производительность / Качество:</b><br>
+        <select id="set-mode" style="width:100%;padding:8px;font-family:monospace;font-size:14px;background:#2a2a4a;color:#fff;border:1px solid #888;border-radius:4px;">
+          <option value="auto">🤖 Авто</option>
+          <option value="presets">🎮 Пресеты</option>
+          <option value="manual">🔧 Ручная настройка</option>
+        </select>
+      </div>
+
+      <!-- Текстурный режим -->
+      <div style="margin-bottom:15px;">
+        <b>🖼️ Текстуры:</b><br>
+        <button id="set-textures" style="padding:5px 15px;font-family:monospace;cursor:pointer;color:#fff;border:1px solid #888;border-radius:4px;"></button>
+      </div>
+
+      <!-- Хитбоксы -->
+      <div style="margin-bottom:15px;">
+        <b>🎯 Хитбоксы:</b><br>
+        <button id="set-hitboxes" style="padding:5px 15px;font-family:monospace;cursor:pointer;color:#fff;border:1px solid #888;border-radius:4px;"></button>
+      </div>
+
+      <!-- Авто -->
+      <div id="settings-auto" style="color:#aaa;font-size:12px;text-align:center;padding:10px;display:none;">🤖 Производительность настраивается автоматически</div>
+
+      <!-- Пресеты -->
+      <div id="settings-presets" style="margin-bottom:15px;display:none;">
+        <b>🎮 Выберите пресет:</b><br>
+        <button id="set-low" style="padding:8px 15px;font-family:monospace;cursor:pointer;color:#fff;border:1px solid #888;border-radius:4px;margin:2px;">🔴 Низкое</button>
+        <button id="set-medium" style="padding:8px 15px;font-family:monospace;cursor:pointer;color:#fff;border:1px solid #888;border-radius:4px;margin:2px;">🟡 Среднее</button>
+        <button id="set-high" style="padding:8px 15px;font-family:monospace;cursor:pointer;color:#fff;border:1px solid #888;border-radius:4px;margin:2px;">🟢 Высокое</button>
+      </div>
+
+      <!-- Ручной -->
+      <div id="settings-manual" style="display:none;">
+        <div style="margin-bottom:15px;">
+          <b>Дальность прорисовки:</b> <span id="set-render-val"></span> чанков<br>
+          <input type="range" min="4" max="32" step="2" value="16" id="set-render" style="width:100%;">
+          <div style="font-size:10px;color:#aaa;"><span id="set-render-label"></span></div>
+        </div>
+
+        <div style="margin-bottom:15px;">
+          <b>Пропуск AI дальних мобов:</b><br>
+          <button id="set-ai-skip" style="padding:5px 15px;font-family:monospace;cursor:pointer;color:#fff;border:1px solid #888;border-radius:4px;"></button>
+        </div>
+
+        <div style="margin-bottom:15px;">
+          <b>Дистанция пропуска AI:</b> <span id="set-ai-dist-val"></span> клеток<br>
+          <input type="range" min="5" max="20" step="1" value="10" id="set-ai-dist" style="width:100%;">
+          <div style="font-size:10px;color:#aaa;"><span id="set-ai-dist-label"></span></div>
+        </div>
+
+        <div style="margin-bottom:15px;">
+          <b>Детали (трава, снег, рябь):</b><br>
+          <button id="set-details" style="padding:5px 15px;font-family:monospace;cursor:pointer;color:#fff;border:1px solid #888;border-radius:4px;"></button>
+        </div>
+
+        <div style="margin-bottom:15px;">
+          <b>Плавные переходы биомов:</b><br>
+          <button id="set-smooth" style="padding:5px 15px;font-family:monospace;cursor:pointer;color:#fff;border:1px solid #888;border-radius:4px;"></button>
+        </div>
+
+        <div style="margin-bottom:15px;">
+          <b>Размытие границ биомов:</b> <span id="set-blend-val"></span> клеток<br>
+          <input type="range" min="1" max="4" step="1" value="4" id="set-blend" style="width:100%;">
+          <div style="font-size:10px;color:#aaa;"><span id="set-blend-label"></span></div>
+        </div>
+      </div>
+
+    </div>
     <button id="btn-settings-close" style="margin-top:15px;padding:10px 20px;font-size:14px;font-family:monospace;background:#4a4a4a;color:#fff;border:2px solid #888;border-radius:8px;cursor:pointer;">Закрыть</button>
   </div>
 </div>
+
 <canvas id="game"></canvas>
+
 <div id="debug-panel" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:200;font-family:monospace;font-size:12px;color:#fff;background:rgba(0,0,0,0.5);display:none;padding:10px;line-height:1.6;white-space:pre-line;"></div>
         <div id="console" style="position:fixed;bottom:0;left:0;width:100%;display:none;z-index:300;pointer-events:auto;">
         <div id="console-output" style="max-height:200px;overflow-y:auto;background:rgba(0,0,0,0.8);color:#0f0;font-family:monospace;font-size:12px;padding:5px;"></div>
         <input id="console-input" type="text" style="width:100%;padding:10px;font-family:monospace;font-size:14px;background:rgba(0,0,0,0.85);color:#0f0;border:none;outline:none;" placeholder="Введите команду...">
         </div>
+
+      <!-- Панель костра -->
+<div id="campfire-panel" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; justify-content:center; align-items:center; z-index:106; pointer-events:auto; background:rgba(0,0,0,0.7);">
+  <div style="background:#1a1a2e; border:2px solid #ff6600; border-radius:16px; padding:20px 25px; text-align:center; color:#fff; box-shadow:0 0 40px rgba(255,100,0,0.4);">
+    <h2 style="color:#ff6600; margin:0 0 15px 0;">🔥 ГОТОВКА</h2>
+    <div style="display:flex; align-items:center; gap:20px; justify-content:center;">
+      <div>
+        <p style="font-size:12px; color:#aaa;">Сырое</p>
+        <div id="cook-input" style="width:50px; height:50px; background:rgba(255,255,255,0.1); border:2px solid #ff6600; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:28px;"></div>
+      </div>
+      <div style="font-size:24px;">→</div>
+      <div id="cook-progress" style="width:40px; height:50px; background:#333; border-radius:8px; position:relative; overflow:hidden;">
+        <div id="cook-progress-fill" style="position:absolute; bottom:0; width:100%; height:0%; background:#ff6600; transition:height 0.3s;"></div>
+      </div>
+      <div style="font-size:24px;">→</div>
+      <div>
+        <p style="font-size:12px; color:#aaa;">Готовое</p>
+        <div id="cook-output" style="width:50px; height:50px; background:rgba(255,255,255,0.1); border:2px solid #888; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:28px;"></div>
+      </div>
+    </div>
+    <div style="margin-top:10px; border-top:1px solid #555; padding-top:10px;">
+      <p style="font-size:12px; color:#aaa;">🪵 Топливо</p>
+      <div id="cook-fuel" style="width:50px; height:50px; background:rgba(255,255,255,0.1); border:2px solid #8B4513; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto;"></div>
+      <div id="cook-fuel-bar" style="width:100px; height:8px; background:#333; border-radius:4px; margin:5px auto; overflow:hidden;">
+        <div id="cook-fuel-fill" style="height:100%; background:#ff6600; width:0%;"></div>
+      </div>
+      <div style="font-size:10px; color:#aaa;" id="cook-fuel-text">0 сек</div>
+    </div>
+    <div style="border-top:2px solid #555; margin-top:15px; padding-top:15px;">
+      <p style="color:#ccc; margin:0 0 10px 0; font-size:14px;">🎒 Твой инвентарь</p>
+      <div id="cook-inv-slots" style="display:flex; gap:6px; justify-content:center;"></div>
+    </div>
+    <p style="margin-top:15px; font-size:12px; color:#888;">Перетащи еду во вход | Клик по готовому — забрать | ESC — закрыть</p>
+  </div>
+</div>  
+
 <script src="js/ai.js"></script>
 <script src="game.js"></script>
-<footer>v0.0.5.0.0</footer>
+<footer>v0.0.5.7.0</footer>
 </body>
 </html>
