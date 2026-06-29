@@ -87,5 +87,37 @@
             {"itemKey": "stick", "chance": 0.9, "count": 2},
             {"itemKey": "torch", "chance": 0.6, "count": 1}
         ]
-    }
+    },
+   "boat": {
+  "name": "🛶 Лодка",
+  "texKey": "item_boat",
+  "hp": 999,
+  "color": "#8B4513",
+  "h": 5,
+  "drops": []
+},
+"chest": {
+  "name": "📦 Сундук",
+  "texKey": "chest",
+  "hp": 999,
+  "color": "#8B4513",
+  "h": 8,
+  "drops": []
+},
+"campfire": {
+  "name": "🔥 Костёр",
+  "texKey": "campfire",
+  "hp": 999,
+  "color": "#ff6600",
+  "h": 6,
+  "drops": []
+},
+"tent": {
+  "name": "⛺ Палатка",
+  "texKey": "tent",
+  "hp": 999,
+  "color": "#a08860",
+  "h": 14,
+  "drops": []
+}
 }

@@ -101,7 +101,7 @@
     "condition": "t > 0.60 && h > 0.50",
     "colorBy": "temperature",
     "resources": {
-      "cactus": {"type": "cactus", "chance": 15},
+      "tree": { "chance": 25, "type": "tree" },
       "cave_entrance": {"type": "cave_entrance", "chance": 0.1 },
       "loot_bag": {"type": "loot_bag", "chance": 0.09}
     }
