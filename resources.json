@@ -82,6 +82,7 @@
         "hp": 1,
         "color": "#ffcc00",
         "h": 10,
+        "places": ["land"],
         "drops": [
             {"itemKey": "wood", "chance": 0.5, "count": 1},
             {"itemKey": "stick", "chance": 0.9, "count": 2},
@@ -94,6 +95,8 @@
   "hp": 999,
   "color": "#8B4513",
   "h": 5,
+  "places": ["water"],
+  "placeLog": "Можно установить только на воду!",
   "drops": []
 },
 "chest": {
@@ -102,6 +105,9 @@
   "hp": 999,
   "color": "#8B4513",
   "h": 8,
+  "places": ["land"],
+"placeLog": "Можно установить только на землю!",
+"storage": "16",
   "drops": []
 },
 "campfire": {
@@ -110,6 +116,21 @@
   "hp": 999,
   "color": "#ff6600",
   "h": 6,
+  "places": ["land"],
+  "placeLog": "Можно установить только на землю!", 
+  "lightRadius": 4,
+  "burning": true,
+  "drops": []
+},
+"torch": {
+  "name": "🕯️ Факел", 
+  "texKey": "item_torch",
+  "hp": 999, 
+  "color": "#ff6600",
+  "h": 4, 
+  "places": ["land"],
+  "placeLog": "Можно установить только на землю!",
+  "lightRadius": 2,
   "drops": []
 },
 "tent": {
@@ -118,6 +139,8 @@
   "hp": 999,
   "color": "#a08860",
   "h": 14,
+  "places": ["land"],
+  "placeLog": "Можно установить только на землю!",
   "drops": []
 }
 }

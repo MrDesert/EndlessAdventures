@@ -208,41 +208,34 @@
   "emoji": "🔥", 
   "texKey": "item_campfire",
   "placeable": true, 
-  "placeKey": "campfire", 
-  "placeColor": "#ff6600", 
-  "lightRadius": 4
+  "placeKey": "campfire"
 },
 "torch": {
   "name": "🕯️ Факел", 
   "emoji": "🕯️", 
   "texKey": "item_torch",
   "placeable": true, 
-  "placeKey": "torch", 
-  "placeColor": "#ffaa00", 
-  "lightRadius": 2
+  "placeKey": "torch"
 },
 "chest": {
   "name": "📦 Сундук", 
   "emoji": "📦", 
   "texKey": "item_chest",
   "placeable": true, 
-  "placeKey": "chest", 
-  "placeColor": "#8B4513"
+  "placeKey": "chest"
 },
 "tent": {
   "name": "⛺ Палатка", 
   "emoji": "⛺", 
   "texKey": "item_tent",
   "placeable": true, 
-  "placeKey": "tent", 
-  "placeColor": "#a08860"
+  "placeKey": "tent"
 },
 "boat": {
   "name": "🛶 Лодка",
   "emoji": "🛶",
   "texKey": "item_boat",
   "placeable": true,
-  "placeKey": "boat",
-  "placeColor": "#8B4513"
+  "placeKey": "boat"
 }
 }

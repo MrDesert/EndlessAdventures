@@ -672,10 +672,7 @@ function useSelectedItem() {
   
   // Placeable предметы
   if (itemData && itemData.placeable) {
-    let typeKey = itemData.placeKey;
-    let color = itemData.placeColor || '#fff';
-    let radius = itemData.lightRadius || 0;
-    if (placeItem(typeKey, color, radius)) {
+    if (placeItem(itemData.placeKey)) {
       item.count--;
       if (item.count <= 0) inventory[selectedSlot] = null;
       updateInventoryUI();
@@ -1372,71 +1369,35 @@ function toggleCraftMenu() {
 
 function placeItem(typeKey, color, radius) {
   let nx = player.tx, ny = player.ty;
+  let res = ALL_RESOURCES[typeKey];
+  if (!res) { addLog('❌ Неизвестный тип предмета!'); return false; }
   
-  // Лодка — только на воду, остальное — только не на воду
-  if (typeKey === 'boat') {
-    if (getTile(nx, ny).base !== 1) { addLog('❌ Лодку можно ставить только на воду!'); return false; }
-  } else {
-    if (getTile(nx, ny).base === 1) { addLog('❌ Нельзя ставить на воде!'); return false; }
-  }
+  let places = res.places || ['land'];
+  let tile = getTile(nx, ny);
+  
+  if ((places.indexOf('water') !== -1 && tile.base !== 1) || (places.indexOf('land') !== -1 && tile.base === 1)) {addLog(res.placeLog); return false;}
   
   let all = getVisibleEntities();
   for (let i = 0; i < all.length; i++) { 
     let e = all[i]; 
-    if (e.tx === nx && e.ty === ny && e.hp > 0 && (e.type === 'campfire' || e.type === 'chest' || e.type === 'resource')) { 
-      addLog('❌ Место занято!'); return false; 
-    } 
+    if (e.tx === nx && e.ty === ny && e.hp > 0 && e.type === 'resource') {addLog('❌ Место занято!'); return false;} 
   }
   
   let ck = Math.floor(nx/CONFIG.CHUNK_SIZE)+','+Math.floor(ny/CONFIG.CHUNK_SIZE);
   if (!chunks[ck]) ensureChunk(Math.floor(nx/CONFIG.CHUNK_SIZE), Math.floor(ny/CONFIG.CHUNK_SIZE));
   
-  // Берём данные из ресурсов если есть, иначе создаём вручную
-  let res = ALL_RESOURCES[typeKey];
+  let entity = createEntity({ 
+    type: 'resource', resourceKey: typeKey, 
+    tx: nx, ty: ny, 
+    texKey: res.texKey, name: res.name,
+    hp: res.hp, maxHp: res.hp, h: res.h || 10, color: res.color, drops: res.drops,
+    lightRadius: res.lightRadius
+  });
   
-  if (res) {
-    // Автоматически из JSON
-    let entity = createEntity({ 
-      type: 'resource', resourceKey: typeKey, 
-      tx: nx, ty: ny, 
-      texKey: res.texKey, name: res.name,
-      hp: res.hp, maxHp: res.hp, h: res.h || 10, color: res.color, drops: res.drops
-    });
-    
-    // Особые свойства для некоторых типов
-    if (typeKey === 'chest') {
-      entity.type = 'chest';
-      entity.storage = [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null];
-    } else if (typeKey === 'campfire') {
-      entity.type = 'campfire';
-      entity.lightRadius = radius || 4;
-      entity.fuel = [];
-      entity.fuelTime = 0;
-      entity.fuelMax = 60000;
-    } else if (typeKey === 'tent') {
-      entity.type = 'tent';
-    }
-    
-    chunks[ck].entities.push(entity);
-  } else {
-    // Fallback для типов без ресурса
-    if (typeKey === 'chest') {
-      chunks[ck].entities.push(createEntity({ type:'chest', tx:nx, ty:ny, name:'📦 Сундук', hp:999, maxHp:999, h:8, color:color, storage: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null] }));
-    } else if (typeKey === 'tent') {
-      chunks[ck].entities.push(createEntity({ type:'tent', tx:nx, ty:ny, name:'⛺ Палатка', hp:999, maxHp:999, h:14, color:'#a08860' }));
-    } else if (typeKey === 'campfire') {
-      chunks[ck].entities.push(createEntity({ 
-        type:'campfire', tx:nx, ty:ny, name:'Костёр', hp:999, maxHp:999, h:6, color:color, lightRadius:radius,
-        fuel: [], fuelTime: 0, fuelMax: 60000
-      }));
-    } else if (typeKey === 'boat') {
-      chunks[ck].entities.push(createEntity({ type:'boat', tx:nx, ty:ny, name:'🛶 Лодка', hp:999, maxHp:999, h:10, color:'#8B4513' }));
-    } else {
-      addLog('❌ Неизвестный тип предмета!');
-      return false;
-    }
-  }
+  if (res.storage) entity.storage = new Array(parseInt(res.storage)).fill(null);
+  if (res.burning) entity.fuel = [];
   
+  chunks[ck].entities.push(entity);
   addLog('✅ Установлено!');
   return true;
 }
@@ -1954,6 +1915,22 @@ canvas.addEventListener('contextmenu', function(e) {
   if (!item) return;
   
   let itemData = findItemData(item.name);
+
+  if (itemData && itemData.edible && itemData.edible.heal) {
+    let healAmount = itemData.edible.heal;
+    let oldHp = player.hp;
+    player.hp = Math.min(player.maxHp, player.hp + healAmount);
+    if (player.hp > oldHp) {
+      addLog('🍽️ Съедено: ' + item.name + ' +' + (player.hp - oldHp) + ' HP');
+      item.count--;
+      if (item.count <= 0) inventory[selectedSlot] = null;
+      updateInventoryUI();
+    } else {
+      addLog('❤️ HP уже полное!');
+    }
+    return;
+  }
+
   if (!itemData || !itemData.placeable) return;
   
   let rect = canvas.getBoundingClientRect();
@@ -1990,7 +1967,7 @@ canvas.addEventListener('contextmenu', function(e) {
   player.tx = bestTx;
   player.ty = bestTy;
   
-  let placed = placeItem(itemData.placeKey, itemData.placeColor || '#fff', itemData.lightRadius || 0);
+  let placed = placeItem(itemData.placeKey);
   
   if (placed) {
     item.count--;
@@ -2140,28 +2117,6 @@ document.getElementById('console-input').addEventListener('keydown', function(e)
     return;
   }
 });
-
-// function pickupLootBag(bag) {
-//   if (!bag.items || bag.items.length === 0) return;
-//   let allPickedUp = true;
-//   let remaining = [];
-//   for (let i = 0; i < bag.items.length; i++) {
-//     let item = bag.items[i];
-//     let added = addToInventory({ name: item.name, emoji: item.emoji, texKey: item.texKey, count: item.count });
-//     if (!added) {
-//       allPickedUp = false;
-//       remaining.push(item);
-//     }
-//   }
-//   if (allPickedUp) {
-//     bag.items = [];
-//     bag.hp = 0;
-//     addLog('📦 Мешок собран!');
-//   } else {
-//     bag.items = remaining;
-//     addLog('🎒 Инвентарь полон!');
-//   }
-// }
 
 function executeCommand(cmd) {
   commandHistory.push(cmd);

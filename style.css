@@ -53,3 +53,126 @@ canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
 #debug-panel { text-shadow: 0 0 4px rgba(0,0,0,0.8); }
 .settings-btn { background: #4a4a6a !important; border-color: #88a !important; }
 .settings-btn:hover { background: #5a5a8a !important; }
+/* ─── Панель настроек ─── */
+#settings-panel {
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%;
+  display: none; 
+  justify-content: center; 
+  align-items: center;
+  z-index: 110; 
+  pointer-events: auto; 
+  background: rgba(0,0,0,0.7);
+}
+.settings-inner {
+  background: #1a1a2e; 
+  border: 2px solid #888; 
+  border-radius: 16px;
+  padding: 25px 30px; 
+  text-align: center; 
+  color: #fff;
+  box-shadow: 0 0 40px rgba(0,0,0,0.8); 
+  min-width: 350px;
+}
+.settings-inner h2 { color: #ffcc00; margin: 0 0 20px 0; }
+#settings-list { text-align: left; line-height: 2; }
+.setting-row { margin-bottom: 15px; }
+.setting-row b { display: block; margin-bottom: 4px; }
+.setting-row select,
+.setting-row input[type="range"] { width: 100%; }
+.setting-row select {
+  padding: 8px; 
+  font-family: monospace; 
+  font-size: 14px;
+  background: #2a2a4a; 
+  color: #fff; 
+  border: 1px solid #888; 
+  border-radius: 4px;
+}
+.setting-row button {
+  padding: 5px 15px; 
+  font-family: monospace; 
+  cursor: pointer;
+  color: #fff; 
+  border: 1px solid #888; 
+  border-radius: 4px;
+}
+#settings-presets button { margin: 2px; }
+.setting-hint { font-size: 10px; color: #aaa; }
+#settings-auto { color: #aaa; font-size: 12px; text-align: center; padding: 10px; display: none; }
+#settings-presets { display: none; }
+#settings-manual { display: none; }
+#btn-settings-close {
+  margin-top: 15px; padding: 10px 20px; font-size: 14px; font-family: monospace;
+  background: #4a4a4a; color: #fff; border: 2px solid #888; border-radius: 8px; cursor: pointer;
+}
+
+/* ─── Панель костра ─── */
+#campfire-panel {
+  display: none; 
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%;
+  justify-content: center; 
+  align-items: center; 
+  z-index: 106;
+  pointer-events: auto; 
+  background: rgba(0,0,0,0.7);
+}
+.campfire-inner {
+  background: #1a1a2e; 
+  border: 2px solid #ff6600; 
+  border-radius: 16px;
+  padding: 20px 25px; 
+  text-align: center; 
+  color: #fff;
+  box-shadow: 0 0 40px rgba(255,100,0,0.4);
+}
+.campfire-inner h2 { color: #ff6600; margin: 0 0 15px 0; }
+.cook-row { display: flex; align-items: center; gap: 20px; justify-content: center; }
+.cook-row p { font-size: 12px; color: #aaa; }
+.cook-slot {
+  width: 50px; 
+  height: 50px; 
+  background: rgba(255,255,255,0.1);
+  border: 2px solid #ff6600; 
+  border-radius: 8px;
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: 28px;
+}
+#cook-output.cook-slot { border-color: #888; }
+#cook-fuel.cook-slot {
+  border-color: #8B4513; margin: 0 auto;
+}
+.cook-arrow { font-size: 24px; }
+.cook-progress-bar {
+  width: 40px; height: 50px; background: #333; border-radius: 8px;
+  position: relative; overflow: hidden;
+}
+#cook-progress-fill {
+  position: absolute; bottom: 0; width: 100%; height: 0%;
+  background: #ff6600; transition: height 0.3s;
+}
+.cook-fuel-section {
+  margin-top: 10px; border-top: 1px solid #555; padding-top: 10px;
+}
+.cook-fuel-section p { font-size: 12px; color: #aaa; }
+.fuel-bar-outer {
+  width: 100px; height: 8px; background: #333; border-radius: 4px;
+  margin: 5px auto; overflow: hidden;
+}
+.fuel-bar-inner { height: 100%; background: #ff6600; width: 0%; }
+#cook-fuel-text { font-size: 10px; color: #aaa; }
+.cook-inv-section {
+  border-top: 2px solid #555; margin-top: 15px; padding-top: 15px;
+}
+.cook-inv-section p { color: #ccc; margin: 0 0 10px 0; font-size: 14px; }
+#cook-inv-slots { display: flex; gap: 6px; justify-content: center; }
+.cook-hint { margin-top: 15px; font-size: 12px; color: #888; }
