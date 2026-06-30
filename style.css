@@ -76,10 +76,11 @@ canvas { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
   color: #fff;
   box-shadow: 0 0 40px rgba(0,0,0,0.8); 
   min-width: 350px;
+  max-width: 50%;
 }
 .settings-inner h2 { color: #ffcc00; margin: 0 0 20px 0; }
 #settings-list { text-align: left; line-height: 2; }
-.setting-row { margin-bottom: 15px; }
+.setting-row {display:flex; flex-wrap: wrap; align-items:center;gap:10px;}
 .setting-row b { display: block; margin-bottom: 4px; }
 .setting-row select,
 .setting-row input[type="range"] { width: 100%; }
