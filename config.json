@@ -15,7 +15,7 @@
   "PLAYER": {
     "startHp": 100,
     "startMaxHp": 100,
-    "startDamage": 10,
+    "startDamage": 1,
     "startAttackRange": 1.5,
     "startMoveDelay": 100,
     "startAttackCooldown": 500,

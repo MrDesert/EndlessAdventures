@@ -2,77 +2,95 @@
   "bone": {
     "name": "Кость",
     "emoji": "🦴",
-    "texKey": "item_bone"
+    "texKey": "item_bone",
+    "xpReward": 2,
+    "damage": 2
   },
   "rotten_flesh": {
     "name": "Гнилая плоть",
     "emoji": "🥩",
-    "texKey": "item_rotten_flesh"
+    "texKey": "item_rotten_flesh",
+    "xpReward": 2
   },
   "bow": {
     "name": "Лук",
     "emoji": "🏹",
-    "texKey": "item_bow"
+    "texKey": "item_bow",
+    "xpReward": 3,
+    "damage": 4
   },
   "fang": {
     "name": "Клык",
     "emoji": "🦷",
-    "texKey": "item_fang"
+    "texKey": "item_fang",
+    "xpReward": 2,
+    "damage": 1
   },
   "leather": {
     "name": "Кожа",
     "emoji": "🧥",
-    "texKey": "item_leather"
+    "texKey": "item_leather",
+    "xpReward": 2
   },
   "demon_heart": {
     "name": "Сердце демона",
     "emoji": "❤️‍🔥",
-    "texKey": "item_demon_heart"
+    "texKey": "item_demon_heart",
+    "xpReward": 3
   },
   "ash": {
     "name": "Пепел",
     "emoji": "🪶",
-    "texKey": "item_ash"
+    "texKey": "item_ash",
+    "xpReward": 3
   },
   "potion": {
     "name": "Зелье",
     "emoji": "🧪",
-    "texKey": "item_potion"
+    "texKey": "item_potion",
+    "xpReward": 3
   },
   "dark_dust": {
     "name": "Тёмная пыль",
     "emoji": "✨",
-    "texKey": "item_dark_dust"
+    "texKey": "item_dark_dust",
+    "xpReward": 2
   },
   "soul": {
     "name": "Душа",
     "emoji": "👻",
-    "texKey": "item_soul"
+    "texKey": "item_soul",
+    "xpReward": 2
   },
   "imp_horn": {
     "name": "Рог беса",
     "emoji": "👿",
-    "texKey": "item_imp_horn"
+    "texKey": "item_imp_horn",
+    "xpReward": 2
   },
   "sulfur": {
     "name": "Сера",
     "emoji": "💛",
-    "texKey": "item_sulfur"
+    "texKey": "item_sulfur",
+    "xpReward": 2
   },
   "wolf_pelt": {
     "name": "Волчья шкура",
     "emoji": "🐺",
-    "texKey": "item_wolf_pelt"
+    "texKey": "item_wolf_pelt",
+    "xpReward": 2
   },
   "boar_pelt": {
     "name": "Кабанья шкура",
     "emoji": "🐗",
-    "texKey": "item_boar_pelt"
+    "texKey": "item_boar_pelt",
+    "xpReward": 2
   },
     "meat": {
     "name": "🥩 Мясо", 
     "emoji": "🥩", 
     "texKey": "item_meat",
+    "xpReward": 2,
     "edible": { "heal": 7 },
     "cook": { "time": 10000, "result": "cooked_meat" }
   },
@@ -80,12 +98,14 @@
     "name": "🥩 Жареное мясо", 
     "emoji": "🥩", 
     "texKey": "item_cooked_meat",
+    "xpReward": 2,
     "edible": { "heal": 20 }
   },
   "venison": {
     "name": "🍖 Оленина", 
     "emoji": "🍖", 
     "texKey": "item_venison",
+    "xpReward": 2,
     "edible": { "heal": 5 },
     "cook": { "time": 10000, "result": "cooked_venison" }
   },
@@ -93,12 +113,14 @@
     "name": "🍖 Жареная оленина", 
     "emoji": "🍖", 
     "texKey": "item_cooked_venison",
+    "xpReward": 2,
     "edible": { "heal": 15 }
   },
   "rabbit_meat": {
     "name": "🍗 Крольчатина", 
     "emoji": "🍗", 
     "texKey": "item_rabbit_meat",
+    "xpReward": 2,
     "edible": { "heal": 3 },
     "cook": { "time": 8000, "result": "cooked_rabbit" }
   },
@@ -106,12 +128,14 @@
     "name": "🍗 Жареная крольчатина", 
     "emoji": "🍗", 
     "texKey": "item_cooked_rabbit",
+    "xpReward": 2,
     "edible": { "heal": 8 }
   },
   "egg": {
     "name": "🍳 Яйцо", 
     "emoji": "🍳", 
     "texKey": "item_egg",
+    "xpReward": 2,
     "edible": { "heal": 5 },
     "cook": { "time": 5000, "result": "cooked_egg" }
   },
@@ -119,94 +143,116 @@
     "name": "🍳 Жареное яйцо", 
     "emoji": "🍳", 
     "texKey": "item_cooked_egg",
+    "xpReward": 2,
     "edible": { "heal": 12 }
   },
   "web": {
     "name": "Паутина",
     "emoji": "🕸️",
-    "texKey": "item_web"
+    "texKey": "item_web",
+    "xpReward": 2
   },
   "poison": {
     "name": "Яд",
     "emoji": "🧪",
-    "texKey": "item_poison"
+    "texKey": "item_poison",
+    "xpReward": 2
   },
   "wood": {
     "name": "Древесина",
     "emoji": "🪵",
     "texKey": "item_wood",
+    "xpReward": 2,
     "fuel": { "time": 30000 }
   },
   "stick": {
     "name": "Палка",
     "emoji": "🥢",
     "texKey": "item_stick",
+    "xpReward": 2,
+    "damage": 1,
     "fuel": { "time": 12000 }
   },
   "resin": {
     "name": "Смола",
     "emoji": "🟤",
-    "texKey": "item_resin"
+    "texKey": "item_resin",
+    "xpReward": 2
   },
   "rock": {
     "name": "Булыжник",
     "emoji": "🪨",
-    "texKey": "item_rock"
+    "texKey": "item_rock",
+    "xpReward": 2,
+    "damage": 2
   },
   "flint": {
     "name": "Кремень",
     "emoji": "💎",
-    "texKey": "item_flint"
+    "texKey": "item_flint",
+    "xpReward": 2,
+    "damage": 2
   },
   "iron_ore": {
     "name": "Железная руда",
     "emoji": "⛏️",
-    "texKey": "item_iron_ore"
+    "texKey": "item_iron_ore",
+    "xpReward": 2,
+    "damage": 2
   },
   "gold_nugget": {
     "name": "Золотой самородок",
     "emoji": "🌟",
-    "texKey": "item_gold_nugget"
+    "texKey": "item_gold_nugget",
+    "xpReward": 2
   },
   "cactus": {
     "name": "Кактус",
     "emoji": "🌵",
-    "texKey": "item_cactus"
+    "texKey": "item_cactus",
+    "xpReward": 2
   },
   "water": {
     "name": "Вода",
     "emoji": "💧",
-    "texKey": "item_water"
+    "texKey": "item_water",
+    "xpReward": 2
   },
   "snowball": {
     "name": "Снежок",
     "emoji": "❄️",
-    "texKey": "item_snowball"
+    "texKey": "item_snowball",
+    "xpReward": 2
   },
   "ice": {
     "name": "Лёд",
     "emoji": "🧊",
-    "texKey": "item_ice"
+    "texKey": "item_ice",
+    "xpReward": 2
   },
   "fiber": {
     "name": "Волокно",
     "emoji": "🧵",
-    "texKey": "item_fiber"
+    "texKey": "item_fiber",
+    "xpReward": 2
   },
   "wheat": {
     "name": "Пшеница",
     "emoji": "🌾",
-    "texKey": "item_wheat"
+    "texKey": "item_wheat",
+    "xpReward": 2
   },
   "seeds": {
     "name": "Семена",
     "emoji": "🌱",
-    "texKey": "item_seeds"
+    "texKey": "item_seeds",
+    "xpReward": 2
   },
   "campfire": {
   "name": "🔥 Костёр", 
   "emoji": "🔥", 
   "texKey": "item_campfire",
+  "xpReward": 2,
   "placeable": true, 
   "placeKey": "campfire"
 },
@@ -214,6 +260,8 @@
   "name": "🕯️ Факел", 
   "emoji": "🕯️", 
   "texKey": "item_torch",
+  "xpReward": 2,
+  "damage": 1,
   "placeable": true, 
   "placeKey": "torch"
 },
@@ -221,6 +269,7 @@
   "name": "📦 Сундук", 
   "emoji": "📦", 
   "texKey": "item_chest",
+  "xpReward": 2,
   "placeable": true, 
   "placeKey": "chest"
 },
@@ -228,6 +277,7 @@
   "name": "⛺ Палатка", 
   "emoji": "⛺", 
   "texKey": "item_tent",
+  "xpReward": 2,
   "placeable": true, 
   "placeKey": "tent"
 },
@@ -235,6 +285,7 @@
   "name": "🛶 Лодка",
   "emoji": "🛶",
   "texKey": "item_boat",
+  "xpReward": 2,
   "placeable": true,
   "placeKey": "boat"
 }
