@@ -1054,25 +1054,21 @@ function burnMonstersInDay(dt){
           e.fallAngle=(Math.random()-0.5)*1.0;
           e.fallDirection=Math.random()>0.5?1:-1;
           
-// Дроп остаётся на земле
-if(e.drops){
-  for(let d=0;d<e.drops.length;d++){
-    let itemData = ALL_ITEMS[e.drops[d].itemKey];
-    if(itemData && Math.random() < e.drops[d].chance){
-      dropItemOnGround({name:itemData.name,emoji:itemData.emoji,texKey:itemData.texKey,count:1},e.tx,e.ty);
-    }
-  }
-}
-          
-          // Опыт только если игрок нанёс последний удар
-          if(e._lastHitByPlayer){
-            addXp(e.xpReward||5);
+          // Дроп остаётся на земле
+          if(e.drops){
+            for(let d=0;d<e.drops.length;d++){
+              let itemData = ALL_ITEMS[e.drops[d].itemKey];
+              if(itemData && Math.random() < (e.drops[d].chance/2)){
+                dropItemOnGround({name:itemData.name,emoji:itemData.emoji,texKey:itemData.texKey,count:1},e.tx,e.ty);
+              }
+            }
           }
         }
       }
     }
   }
 }
+
 function cleanupDead(){
   let now = Date.now();
   for(let key in chunks){
@@ -1235,7 +1231,7 @@ function attackEntity(target) {
           player.hp = Math.min(player.maxHp, player.hp + itemData.edible.heal);
         }
       }
-      addXp(target.xpReward || 2); 
+      if(target.xpReward)addXp(target.xpReward); 
       addLog('🍖 ' + target.name + ' убит!');
       processDrops(target.drops, target.tx, target.ty);
     }
