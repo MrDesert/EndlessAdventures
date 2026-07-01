@@ -266,7 +266,7 @@
     "xpReward": 12,
     "drops": [
         {"itemKey": "web","chance": 0.7},
-        {"itemKey": "venom_fang", "chance": 0.3}
+        {"itemKey": "poison", "chance": 0.3}
     ],
     "spawn": [
         {"biome": "forest", "chance": 0.003, "maxPerChunk": 1, "spawnTime": "any"},
@@ -289,8 +289,9 @@
     "color": "#137400", 
     "xpReward": 12,
     "drops": [
-        {"itemKey": "leather", "chance": 0.5},
-        {"itemKey": "venom_fang", "chance": 0.4}
+        {"itemKey": "leather", "chance": 0.5, "count": 1},
+        {"itemKey": "poison", "chance": 0.4, "count": 1},
+        {"itemKey": "fang", "chance": 0.1, "count": 1}
     ],
     "spawn": [
         {"biome": "sand", "chance": 0.005, "maxPerChunk": 1, "spawnTime": "any"},
@@ -306,7 +307,8 @@
     "color": "#f5f5dc",
     "drops": [
         {"itemKey": "meat", "chance": 1.0, "count": 1},
-        {"itemKey": "meat", "chance": 0.7, "count": 2}
+        {"itemKey": "meat", "chance": 0.7, "count": 2},
+        {"itemKey": "leather", "chance": 0.4, "count": 1}
     ],
     "xpReward": 5,
     "spawn": [

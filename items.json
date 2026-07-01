@@ -126,10 +126,10 @@
     "emoji": "🕸️",
     "texKey": "item_web"
   },
-  "venom_fang": {
-    "name": "Ядовитый клык",
-    "emoji": "🦷",
-    "texKey": "item_venom_fang"
+  "poison": {
+    "name": "Яд",
+    "emoji": "🧪",
+    "texKey": "item_poison"
   },
   "wood": {
     "name": "Древесина",
