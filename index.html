@@ -85,9 +85,7 @@
           <option value="manual">Ручная настройка</option>
         </select>
       </div>
-      <div class="setting-row">
-        <b>Текстуры:</b><button id="set-textures"></button>
-      </div>
+      <div class="setting-row"><b>Текстуры:</b><button id="set-textures"></button></div>
       <div class="setting-row"><b>Хитбоксы:</b><button id="set-hitboxes"></button></div>
       <div id="settings-auto">Производительность настраивается автоматически</div>
       <div id="settings-presets" class="setting-row">
@@ -102,23 +100,15 @@
           <input type="range" min="4" max="32" step="2" value="16" id="set-render">
           <div class="setting-hint"><span id="set-render-label"></span></div>
         </div>
-        <div class="setting-row">
-          <b>Пропуск AI дальних мобов:</b><button id="set-ai-skip"></button>
-        </div>
+        <div class="setting-row"><b>Пропуск AI дальних мобов:</b><button id="set-ai-skip"></button></div>
         <div class="setting-row">
           <b>Дистанция пропуска AI:</b> <span id="set-ai-dist-val"></span> клеток
           <input type="range" min="5" max="20" step="1" value="10" id="set-ai-dist">
           <div class="setting-hint"><span id="set-ai-dist-label"></span></div>
         </div>
-        <div class="setting-row">
-          <b>Детали (трава, снег, рябь):</b><button id="set-details"></button>
-        </div>
-        <div class="setting-row">
-          <b>Плавные переходы биомов:</b><button id="set-smooth"></button>
-        </div>
-        <div class="setting-row">
-          <b>Размытие границ биомов:</b> <span id="set-blend-val"></span> клеток
-          <input type="range" min="1" max="4" step="1" value="4" id="set-blend">
+        <div class="setting-row"><b>Детали (трава, снег, рябь):</b><button id="set-details"></button></div>
+        <div class="setting-row"><b>Плавные переходы биомов:</b><button id="set-smooth"></button></div>
+        <div class="setting-row"><b>Размытие границ биомов:</b> <span id="set-blend-val"></span> клеток<input type="range" min="1" max="4" step="1" value="4" id="set-blend">
           <div class="setting-hint"><span id="set-blend-label"></span></div>
         </div>
       </div>
@@ -140,19 +130,13 @@
   <div class="campfire-inner">
     <h2>🔥 ГОТОВКА</h2>
     <div class="cook-row">
-      <div>
-        <p>Сырое</p>
-        <div id="cook-input" class="cook-slot"></div>
-      </div>
+      <div><p>Сырое</p><div id="cook-input" class="cook-slot"></div></div>
       <div class="cook-arrow">→</div>
       <div id="cook-progress" class="cook-progress-bar">
         <div id="cook-progress-fill"></div>
       </div>
       <div class="cook-arrow">→</div>
-      <div>
-        <p>Готовое</p>
-        <div id="cook-output" class="cook-slot"></div>
-      </div>
+      <div><p>Готовое</p><div id="cook-output" class="cook-slot"></div></div>
     </div>
     <div class="cook-fuel-section">
       <p>🪵 Топливо</p>
@@ -162,10 +146,7 @@
       </div>
       <div id="cook-fuel-text">0 сек</div>
     </div>
-    <div class="cook-inv-section">
-      <p>🎒 Твой инвентарь</p>
-      <div id="cook-inv-slots"></div>
-    </div>
+    <div class="cook-inv-section"><p>Твой инвентарь</p><div id="cook-inv-slots"></div></div>
     <p class="cook-hint">Перетащи еду во вход | Клик по готовому — забрать | ESC — закрыть</p>
   </div>
 </div>
@@ -173,6 +154,6 @@
 <script src="js/render.js"></script>
 <script src="js/ai.js"></script>
 <script src="game.js"></script>
-<footer>v0.0.6.0.9</footer>
+<footer>v0.0.6.1.0</footer>
 </body>
 </html>

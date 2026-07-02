@@ -159,6 +159,7 @@ let caveEntrancePos = null;
 let caveExitEntity = null;
 
 function enterCave(entrance) {
+  addLog('🕳️ Вы вошли в пещеру!');
   inCave = true;
   caveEntrancePos = { tx: entrance.tx, ty: entrance.ty };
   
@@ -189,6 +190,7 @@ function enterCave(entrance) {
   render();
 }
 function exitCave(targetExit) {
+  addLog('🕳️ Вы вышли из пещеры!');
   inCave = false;
   player.tx = targetExit.tx;
   player.ty = targetExit.ty;
@@ -952,36 +954,47 @@ function getEntitiesAt(tx, ty, chunk) {
   
   if (suitable.length > 0) {
     let idx = Math.floor(Math.random() * suitable.length);
-    let mob = ALL_MOBS[suitable[idx]];
-    let isPeaceful = mob.type === 'peaceful';
-    
-    entities.push(createEntity({
-      type: isPeaceful ? 'peaceful' : 'monster',
-      mobKey: suitable[idx],
-      tx, ty, texKey: mob.texKey, name: mob.name,
-      hp: mob.hp, maxHp: mob.hp,
-      damage: mob.damage || 0,
-      moveDelay: mob.moveDelay || 400,
-      chaseRange: mob.chaseRange || 4,
-      attackRange: mob.attackRange || 1,
-      attackCooldownTime: mob.attackCD || 500,
-      attackCooldown: 0, h: mob.h || (isPeaceful ? 10 : 16),
-      color: mob.color,
-      burnsInDay: mob.burnsInDay || false,
-      neutral: mob.type === 'neutral',
-      category: mob.category || null,
-      _isAggressive: Math.random() < (mob.aggroChance || 0),
-      huntTargets: mob.huntTargets || null,
-      fleeFrom: mob.fleeFrom || null,
-      xpReward: mob.xpReward || 2,
-      drops: mob.drops || [],
-      fleeTimer: 0,
-      ai: { state:'idle', wanderTarget:null, idleTimer:1000+Math.random()*3000, moveTimer:0, moveCooldown:0, forgetTimer:0 },
-      _flipped: Math.random() < 0.5
-    }));
+    spawnMob(suitable[idx], tx, ty);
   }
   
   return entities;
+}
+
+function spawnMob(mobKey, tx, ty) {
+  let mob = ALL_MOBS[mobKey];
+  if (!mob) return null;
+  let isPeaceful = mob.type === 'peaceful';
+  
+  let ck = Math.floor(tx/CONFIG.CHUNK_SIZE)+','+Math.floor(ty/CONFIG.CHUNK_SIZE);
+  if (!chunks[ck]) ensureChunk(Math.floor(tx/CONFIG.CHUNK_SIZE), Math.floor(ty/CONFIG.CHUNK_SIZE));
+  
+  let entity = createEntity({
+    type: isPeaceful ? 'peaceful' : 'monster',
+    mobKey: mobKey,
+    tx, ty, texKey: mob.texKey, name: mob.name,
+    hp: mob.hp, maxHp: mob.hp,
+    damage: mob.damage || 0,
+    moveDelay: mob.moveDelay || 400,
+    chaseRange: mob.chaseRange || 4,
+    attackRange: mob.attackRange || 1,
+    attackCooldownTime: mob.attackCD || 500,
+    attackCooldown: 0, h: mob.h || (isPeaceful ? 10 : 16),
+    color: mob.color,
+    burnsInDay: mob.burnsInDay || false,
+    neutral: mob.type === 'neutral',
+    category: mob.category || null,
+    _isAggressive: Math.random() < (mob.aggroChance || 0),
+    huntTargets: mob.huntTargets || null,
+    fleeFrom: mob.fleeFrom || null,
+    xpReward: mob.xpReward || 2,
+    drops: mob.drops || [],
+    fleeTimer: 0,
+    ai: { state:'idle', wanderTarget:null, idleTimer:1000+Math.random()*3000, moveTimer:0, moveCooldown:0, forgetTimer:0 },
+    _flipped: Math.random() < 0.5
+  });
+  
+  chunks[ck].entities.push(entity);
+  return entity;
 }
 
 function ensureChunk(cx, cy) {
@@ -1189,21 +1202,8 @@ function attackEntity(target) {
   
   if (target.type === 'resource') {
     if ((target.resourceKey === 'tree' || target.resourceKey === 'pine') && Math.random() < 0.15) {
-      let spiderMob = ALL_MOBS['spider'];
-      let ck = Math.floor(target.tx/CONFIG.CHUNK_SIZE)+','+Math.floor(target.ty/CONFIG.CHUNK_SIZE);
-      if (chunks[ck]) {
-        chunks[ck].entities.push(createEntity({
-          type:'monster', mobKey:'spider',
-          tx:target.tx, ty:target.ty, texKey:spiderMob.texKey, name:spiderMob.name,
-          hp:spiderMob.hp, maxHp:spiderMob.hp, damage:spiderMob.damage,
-          moveDelay:spiderMob.moveDelay, chaseRange:spiderMob.chaseRange,
-          attackRange:spiderMob.attackRange, attackCooldownTime:spiderMob.attackCD,
-          attackCooldown:0, h:10, color:spiderMob.color,
-          burnsInDay:false, neutral:false, xpReward:spiderMob.xpReward, drops:spiderMob.drops,
-          ai:{state:'chase',wanderTarget:null,idleTimer:500,moveTimer:0,moveCooldown:0,forgetTimer:5000}
-        }));
-        addLog('🕷️ Паук упал с дерева!');
-      }
+      spawnMob('spider', target.tx, target.ty);
+      addLog('🕷️ Паук упал с дерева!');
     }
     addLog('⛏️ Рубим ' + target.name + '...');
     if (target.hp <= 0) { 
@@ -1211,6 +1211,7 @@ function attackEntity(target) {
       target.deathTime = Date.now(); 
       target.fallAngle = (Math.random() - 0.5) * 1.2;
       target.fallDirection = Math.random() > 0.5 ? 1 : -1;
+      if(target.xpReward)addXp(target.xpReward); 
       addLog('💥 ' + target.name + ' сломан!');
       processDrops(target.drops, target.tx, target.ty);
     }
@@ -1245,7 +1246,7 @@ function attackEntity(target) {
     target.deathTime = Date.now(); 
     target.fallAngle = (Math.random() - 0.5) * 1.0;
     target.fallDirection = Math.random() > 0.5 ? 1 : -1;
-    addXp(target.xpReward || 5); 
+    if(target.xpReward)addXp(target.xpReward); 
     addLog('💀 ' + target.name + ' убит!');
     processDrops(target.drops, target.tx, target.ty);
     return;
@@ -1744,96 +1745,32 @@ canvas.addEventListener('click', function(e) {
   if (e.target !== canvas) return;
   
   // Если держим предмет
-  if (player.heldItem) {
-    let bestChest = null;
+    if (player.heldItem) {
     for (let i = 0; i < entities.length; i++) {
       let ent = entities[i];
-      if (ent.type === 'chest' && isClickOnEntity(mx, my, ent)) {
-        bestChest = ent; break;
-      }
+      if (ent.type === 'chest' && isClickOnEntity(mx, my, ent)) {openChestUI(ent); return;}
     }
-    if (bestChest) { openChestUI(bestChest); return; }
     addLog('✋ Отмена переноса');
     player.heldItem = null;
     updateInventoryUI();
     return;
   }
   
-  // ═══ 1. СНАЧАЛА АТАКА (враги + ресурсы) ═══
-  let targets = [];
   for (let i = 0; i < entities.length; i++) {
     let ent = entities[i];
-    if ((ent.type === 'monster' || ent.type === 'peaceful' || ent.type === 'resource') && ent.hp > 0) {
-      targets.push(ent);
+    let inRange = Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= player.attackRange;
+    let clicked = isClickOnEntity(mx, my, ent);
+
+    if (clicked && inRange) {
+      if ((ent.type === 'monster' || ent.type === 'peaceful' || ent.type === 'resource') && ent.hp > 0) {attackEntity(ent); return;} // ═══ 1. СНАЧАЛА АТАКА (враги + ресурсы) ═══
+      else if (ent.type === 'cave_entrance') {enterCave(ent); return;} // ═══ 2. ВХОД ПЕЩЕРЫ ═══
+      else if(ent.type === 'cave_exit') {exitCave({ tx: ent.surfaceTx || ent.tx, ty: ent.surfaceTy || ent.ty }); return;} // ═══ 2. ВЫХОД ПЕЩЕРЫ ═══
+      else if (ent.type === 'campfire') {openCampfireUI(ent); return;} // ═══ 3. КОСТЁР ═══
+      else if (ent.type === 'chest') {openChestUI(ent); return;} // ═══ 4. СУНДУК ═══
+      else if (ent.type === 'loot_bag' && ent.items && ent.items.length > 0) {pickupDroppedItem(ent); return;} // ═══ 5. ПОДОБРАТЬ МЕШОК (лут) ═══
     }
-  }
-  
-  let bestTarget = null;
-  for (let i = 0; i < targets.length; i++) {
-    if (isClickOnEntity(mx, my, targets[i])) {
-      bestTarget = targets[i];
-      break;
-    }
-  }
-  
-  if (bestTarget) {
-    let distToTarget = Math.sqrt((bestTarget.tx - player.tx) ** 2 + (bestTarget.ty - player.ty) ** 2);
-    
-    if (distToTarget <= player.attackRange) {
-      attackEntity(bestTarget);
-    } else {
-      let path = findPath(player.tx, player.ty, bestTarget.tx, bestTarget.ty, 80);
-      if (path && path.length > 0) {
-        playerPath = path;
-        pathTarget = { tx: bestTarget.tx, ty: bestTarget.ty };
-        player._attackOnArrival = null;
-      }
-    }
-    return;
-  }
-  
-  // ═══ 2. ВХОД/ВЫХОД ПЕЩЕРЫ ═══
-  for (let i = 0; i < entities.length; i++) {
-    let ent = entities[i];
-    if (ent.type === 'cave_entrance' || ent.type === 'cave_exit') {
-      if (isClickOnEntity(mx, my, ent) && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
-        if (ent.type === 'cave_entrance') {
-          enterCave(ent);
-          addLog('🕳️ Вы вошли в пещеру!');
-        } else {
-          exitCave({ tx: ent.surfaceTx || ent.tx, ty: ent.surfaceTy || ent.ty });
-          addLog('🕳️ Вы вышли из пещеры!');
-        }
-        return;
-      }
-    }
-  }
-  
-  // ═══ 3. КОСТЁР ═══
-  for (let i = 0; i < entities.length; i++) {
-    let ent = entities[i];
-    if (ent.type === 'campfire') {
-      if (isClickOnEntity(mx, my, ent) && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
-        openCampfireUI(ent);
-        return;
-      }
-    }
-  }
-  
-  // ═══ 4. СУНДУК ═══
-  for (let i = 0; i < entities.length; i++) {
-    let ent = entities[i];
-    if (ent.type === 'chest') {
-      if (isClickOnEntity(mx, my, ent) && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
-        openChestUI(ent);
-        return;
-      }
-    }
-  }
-  
-  // ═══ 5. ПОДОБРАТЬ ПРЕДМЕТ С ЗЕМЛИ (один предмет) ═══
-  for (let i = 0; i < entities.length; i++) {
-    let ent = entities[i];
+
+      // ═══ 6. ПОДОБРАТЬ ПРЕДМЕТ С ЗЕМЛИ (один предмет) ═══
     if (ent.type === 'dropped_item' && ent.item && ent.hp > 0) {
       // Проверяем клик без isClickOnEntity (у dropped_item своя отрисовка)
       let pos = tileToScreen(ent.rx, ent.ry);
@@ -1841,7 +1778,7 @@ canvas.addEventListener('click', function(e) {
       let dy = my - (pos.y - 8 * zoom);
       let dist = Math.sqrt(dx * dx + dy * dy);
       
-      if (dist < 12 * zoom && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
+      if (dist < 12 * zoom && inRange) {
         let item = ent.item;
         let added = addToInventory({ name: item.name, emoji: item.emoji, texKey: item.texKey, count: item.count || 1 });
         if (added) {
@@ -1849,20 +1786,8 @@ canvas.addEventListener('click', function(e) {
           ent.deathTime = Date.now();
           cachedObjects = null;
           addLog('📦 Подобрано: ' + item.name);
-        } else {
-          addLog('🎒 Инвентарь полон!');
-        }
-        return;
-      }
-    }
-  }
-  
-  // ═══ 6. ПОДОБРАТЬ МЕШОК (лут) ═══
-  for (let i = 0; i < entities.length; i++) {
-    let ent = entities[i];
-    if (ent.type === 'loot_bag' && ent.items && ent.items.length > 0) {
-      if (isClickOnEntity(mx, my, ent) && Math.abs(ent.tx - player.tx) + Math.abs(ent.ty - player.ty) <= 1.5) {
-        pickupDroppedItem(ent);
+        } 
+        else {addLog('🎒 Инвентарь полон!');}
         return;
       }
     }
@@ -1874,9 +1799,13 @@ canvas.addEventListener('click', function(e) {
   
   for (let dx = -5; dx <= 5; dx++) {
     for (let dy = -5; dy <= 5; dy++) {
-      let checkTX = Math.round(player.tx + (mx - canvas.width/2) / (CONFIG.TILE_W/2 * zoom) / 2 + (my - canvas.height/2) / (CONFIG.TILE_H/2 * zoom) / 2 + dx);
-      let checkTY = Math.round(player.ty - (mx - canvas.width/2) / (CONFIG.TILE_W/2 * zoom) / 2 + (my - canvas.height/2) / (CONFIG.TILE_H/2 * zoom) / 2 + dy);
-      
+      let width = mx - canvas.width/2;
+      let height = my - canvas.height/2;
+      let tile_w = CONFIG.TILE_W/2 * zoom;
+      let tile_h = CONFIG.TILE_H/2 * zoom;
+
+      let checkTX = Math.round(player.tx + width/tile_w/2 + height/tile_h/2 + dx);
+      let checkTY = Math.round(player.ty - width/tile_w/2 + height/tile_h/2 + dy);
       let screenPos = tileToScreen(checkTX, checkTY);
       let dist = Math.sqrt((mx - screenPos.x) ** 2 + (my - screenPos.y) ** 2);
       
@@ -1954,7 +1883,7 @@ canvas.addEventListener('contextmenu', function(e) {
   for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) checkTile(player.tx + dx, player.ty + dy);
   
   let distToTarget = Math.sqrt((bestTx - player.tx) ** 2 + (bestTy - player.ty) ** 2);
-  if (distToTarget > 1.5) {
+  if (distToTarget > player.attackRange) {
     addLog('📏 Слишком далеко для установки!');
     return;
   }
@@ -2044,9 +1973,9 @@ if (parts.length === 1 && val.startsWith('/')) {
 
 // Стрелки для истории + Tab + Enter + Escape
 document.getElementById('console-input').addEventListener('keydown', function(e) {
+  let suggestEl = document.getElementById('console-suggest');
   if (e.code === 'Tab') {
     e.preventDefault();
-    let suggestEl = document.getElementById('console-suggest');
     if (suggestEl && suggestEl.style.display !== 'none') {
       let items = suggestEl.querySelectorAll('span');
       if (items.length > 0) {
@@ -2059,7 +1988,6 @@ document.getElementById('console-input').addEventListener('keydown', function(e)
   
   if (e.code === 'Enter') {
     e.preventDefault();
-    let suggestEl = document.getElementById('console-suggest');
     if (suggestEl && suggestEl.style.display !== 'none' && suggestIndex >= 0) {
       let items = suggestEl.querySelectorAll('span');
       if (items.length > suggestIndex && items[suggestIndex]) {
@@ -2105,8 +2033,7 @@ document.getElementById('console-input').addEventListener('keydown', function(e)
   
   if (e.code === 'Escape') {
     document.getElementById('console').style.display = 'none';
-    let s = document.getElementById('console-suggest');
-    if(s) s.style.display = 'none';
+    if(suggestEl) suggestEl.style.display = 'none';
     paused = false;
     document.getElementById('console-input').blur();
     e.stopPropagation();
